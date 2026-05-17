@@ -76,4 +76,37 @@ describe("normalization pipeline", () => {
       }),
     );
   });
+
+  it("tags listings with missing address or unclear suburb for manual address check", () => {
+    const context = { fetchedAt: "2026-05-17T00:00:00.000Z" };
+    const missingAddress = normalizePropertyListing(
+      {
+        title: "Paraparaumu family home",
+        sourceId: "source_trade_me",
+        sourceUrl:
+          "https://www.trademe.co.nz/a/property/residential/sale/listing/456",
+        platform: "Trade Me",
+        suburb: "Paraparaumu",
+      },
+      context,
+    );
+    const unclearArea = normalizePropertyListing(
+      {
+        address: "34 Example Road",
+        sourceId: "source_trade_me",
+        sourceUrl:
+          "https://www.trademe.co.nz/a/property/residential/sale/listing/789",
+        platform: "Trade Me",
+        suburb: "Wellington",
+      },
+      context,
+    );
+
+    expect(tagItem(missingAddress.item).tags).toEqual(
+      expect.arrayContaining(["paraparaumu", "needs_manual_address_check"]),
+    );
+    expect(tagItem(unclearArea.item).tags).toContain(
+      "needs_manual_address_check",
+    );
+  });
 });

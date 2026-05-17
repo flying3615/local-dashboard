@@ -34,11 +34,17 @@ export function normalizePropertyListing(
   raw: RawPropertyListing,
   _context: NormalizeContext,
 ): NormalizedPropertyListing {
-  const address = cleanNullable(raw.address) ?? "Unknown address";
-  const suburb = cleanNullable(raw.suburb ?? raw.area) ?? "Unknown suburb";
+  const rawAddress = cleanNullable(raw.address);
+  const rawSuburb = cleanNullable(raw.suburb ?? raw.area);
+  const address = rawAddress ?? "Unknown address";
+  const suburb = rawSuburb ?? "Unknown suburb";
   const title = cleanNullable(raw.title) ?? address;
   const openHomeTimes = raw.openHomeTimes ?? [];
   const itemId = createStableItemId(raw);
+  const initialTags =
+    rawAddress === null || rawSuburb === null
+      ? ["needs_manual_address_check"]
+      : [];
 
   return {
     item: {
@@ -54,7 +60,7 @@ export function normalizePropertyListing(
       startsAt: openHomeTimes[0] ?? null,
       endsAt: null,
       status: "new",
-      tags: [],
+      tags: initialTags,
       rawSnapshotId: raw.rawSnapshotId ?? null,
     },
     property: {
