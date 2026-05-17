@@ -1,0 +1,110 @@
+import { createHash } from "node:crypto";
+
+import type { Item, PropertyListing } from "../domain/types";
+
+export interface RawPropertyListing {
+  address?: string | null;
+  title?: string | null;
+  sourceId: string;
+  sourceUrl: string;
+  platform: string;
+  suburb?: string | null;
+  area?: string | null;
+  price?: string | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  parking?: number | null;
+  landArea?: number | null;
+  floorArea?: number | null;
+  listedAt?: string | null;
+  openHomeTimes?: string[];
+  rawSnapshotId?: string | null;
+}
+
+export interface NormalizeContext {
+  fetchedAt: string;
+}
+
+export interface NormalizedPropertyListing {
+  item: Item;
+  property: PropertyListing;
+}
+
+export function normalizePropertyListing(
+  raw: RawPropertyListing,
+  _context: NormalizeContext,
+): NormalizedPropertyListing {
+  const address = cleanNullable(raw.address) ?? "Unknown address";
+  const suburb = cleanNullable(raw.suburb ?? raw.area) ?? "Unknown suburb";
+  const title = cleanNullable(raw.title) ?? address;
+  const openHomeTimes = raw.openHomeTimes ?? [];
+  const itemId = createStableItemId(raw);
+
+  return {
+    item: {
+      id: itemId,
+      type: "property_listing",
+      title,
+      summary: createSummary(raw, suburb),
+      sourceId: raw.sourceId,
+      sourceUrl: raw.sourceUrl,
+      area: suburb,
+      address,
+      publishedAt: raw.listedAt ?? null,
+      startsAt: openHomeTimes[0] ?? null,
+      endsAt: null,
+      status: "new",
+      tags: [],
+      rawSnapshotId: raw.rawSnapshotId ?? null,
+    },
+    property: {
+      id: `property_${stableHash(itemId)}`,
+      itemId,
+      address,
+      suburb,
+      price: raw.price ?? null,
+      bedrooms: raw.bedrooms ?? null,
+      bathrooms: raw.bathrooms ?? null,
+      parking: raw.parking ?? null,
+      landArea: raw.landArea ?? null,
+      floorArea: raw.floorArea ?? null,
+      listedAt: raw.listedAt ?? null,
+      openHomeTimes,
+      platform: raw.platform,
+      watchStatus: "new",
+      notes: null,
+    },
+  };
+}
+
+function createStableItemId(raw: RawPropertyListing): string {
+  // Stable item IDs prefer the source URL because listing URLs are platform-owned.
+  // When a URL is unavailable in later importers, source/platform plus address is the fallback.
+  const sourceKey = raw.sourceUrl || cleanNullable(raw.address) || "unknown";
+  return `item_${stableHash(`${raw.sourceId}|${raw.platform}|${sourceKey}`)}`;
+}
+
+function createSummary(raw: RawPropertyListing, suburb: string): string {
+  const details = [
+    raw.price,
+    formatCount(raw.bedrooms, "bed"),
+    formatCount(raw.bathrooms, "bath"),
+    formatCount(raw.parking, "park"),
+  ].filter(Boolean);
+
+  const suffix = details.length > 0 ? `: ${details.join(", ")}` : "";
+  return `Property listing in ${suburb}${suffix}`;
+}
+
+function formatCount(value: number | null | undefined, label: string): string | null {
+  return value == null ? null : `${value} ${label}`;
+}
+
+function cleanNullable(value: string | null | undefined): string | null {
+  const cleaned = value?.trim();
+  return cleaned ? cleaned : null;
+}
+
+function stableHash(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 16);
+}
