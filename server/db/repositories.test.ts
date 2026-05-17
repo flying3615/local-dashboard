@@ -173,6 +173,28 @@ describe("repositories", () => {
         rawPayload: { score: Number.NaN },
       }),
     ).toThrow(/rawPayload must be JSON serializable/);
+
+    expect(() =>
+      repos.rawSnapshots.insert({
+        id: "raw_4",
+        sourceId: "source_1",
+        fetchedAt: "2026-05-17T00:00:00.000Z",
+        url: "https://example.com/listing",
+        contentHash: "hash_4",
+        rawPayload: new Map([["title", "12 Example Street"]]),
+      }),
+    ).toThrow(/rawPayload must be JSON serializable/);
+
+    expect(() =>
+      repos.rawSnapshots.insert({
+        id: "raw_5",
+        sourceId: "source_1",
+        fetchedAt: "2026-05-17T00:00:00.000Z",
+        url: "https://example.com/listing",
+        contentHash: "hash_5",
+        rawPayload: { fetchedAt: new Date("2026-05-17T00:00:00.000Z") },
+      }),
+    ).toThrow(/rawPayload must be JSON serializable/);
   });
 
   it("updates a property listing by item id", () => {

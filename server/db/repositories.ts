@@ -456,6 +456,10 @@ function assertJsonSerializable(
   }
 
   if (typeof value === "object") {
+    if (!isPlainJsonObject(value)) {
+      throw new Error(`${fieldName} contains a non-plain object`);
+    }
+
     if (seen.has(value)) {
       throw new Error(`${fieldName} contains a circular reference`);
     }
@@ -469,4 +473,10 @@ function assertJsonSerializable(
   }
 
   throw new Error(`${fieldName} contains ${typeof value}`);
+}
+
+function isPlainJsonObject(value: object): value is Record<string, unknown> {
+  const prototype = Object.getPrototypeOf(value);
+
+  return prototype === Object.prototype || prototype === null;
 }
