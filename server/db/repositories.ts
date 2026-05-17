@@ -1,5 +1,6 @@
 import type {
   Item,
+  ItemLink,
   ItemType,
   PropertyListing,
   RawSnapshot,
@@ -8,6 +9,7 @@ import type {
 } from "../domain/types";
 import {
   itemSchema,
+  itemLinkSchema,
   propertyListingSchema,
   rawSnapshotSchema,
   sourceSchema,
@@ -68,6 +70,15 @@ type RawSnapshotRow = {
   url: string;
   content_hash: string;
   raw_payload: string;
+};
+
+type ItemLinkRow = {
+  id: string;
+  from_item_id: string;
+  to_entity_type: string;
+  to_entity_id: string;
+  link_reason: string;
+  confidence: number;
 };
 
 type ItemListFilters = {
@@ -335,6 +346,50 @@ export function createRepositories(db: AppDatabase) {
         return rows.map(mapPropertyListingRow);
       },
     },
+
+    itemLinks: {
+      upsert(link: ItemLink): ItemLink {
+        const parsed = itemLinkSchema.parse(link);
+
+        db.prepare(
+          `
+            INSERT INTO item_links (
+              id,
+              from_item_id,
+              to_entity_type,
+              to_entity_id,
+              link_reason,
+              confidence
+            )
+            VALUES (
+              @id,
+              @fromItemId,
+              @toEntityType,
+              @toEntityId,
+              @linkReason,
+              @confidence
+            )
+            ON CONFLICT(id) DO UPDATE SET
+              from_item_id = excluded.from_item_id,
+              to_entity_type = excluded.to_entity_type,
+              to_entity_id = excluded.to_entity_id,
+              link_reason = excluded.link_reason,
+              confidence = excluded.confidence,
+              updated_at = CURRENT_TIMESTAMP
+          `,
+        ).run(parsed);
+
+        return parsed;
+      },
+
+      listByItem(itemId: string): ItemLink[] {
+        const rows = db
+          .prepare("SELECT * FROM item_links WHERE from_item_id = ? ORDER BY id")
+          .all(itemId) as ItemLinkRow[];
+
+        return rows.map(mapItemLinkRow);
+      },
+    },
   };
 }
 
@@ -399,6 +454,17 @@ function mapPropertyListingRow(row: PropertyListingRow): PropertyListing {
     platform: row.platform,
     watchStatus: row.watch_status,
     notes: row.notes,
+  });
+}
+
+function mapItemLinkRow(row: ItemLinkRow): ItemLink {
+  return itemLinkSchema.parse({
+    id: row.id,
+    fromItemId: row.from_item_id,
+    toEntityType: row.to_entity_type,
+    toEntityId: row.to_entity_id,
+    linkReason: row.link_reason,
+    confidence: row.confidence,
   });
 }
 

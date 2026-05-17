@@ -82,6 +82,59 @@ describe("repositories", () => {
     expect(repos.properties.list()).toHaveLength(1);
   });
 
+  it("stores item links for normalized relationships", () => {
+    const repos = createTestRepositories();
+
+    repos.sources.upsert({
+      id: "source_1",
+      name: "Test Listings",
+      type: "property_platform",
+      url: "https://example.com",
+      trustLevel: "platform",
+      enabled: true,
+      refreshIntervalMinutes: 720,
+      lastSuccessAt: null,
+      lastError: null,
+    });
+
+    repos.items.upsert({
+      id: "item_1",
+      type: "property_listing",
+      title: "12 Example Street",
+      summary: "New listing",
+      sourceId: "source_1",
+      sourceUrl: "https://example.com/listing",
+      area: "Paraparaumu",
+      address: "12 Example Street, Paraparaumu",
+      publishedAt: null,
+      startsAt: null,
+      endsAt: null,
+      status: "new",
+      tags: ["new"],
+      rawSnapshotId: null,
+    });
+
+    repos.itemLinks.upsert({
+      id: "link_1",
+      fromItemId: "item_1",
+      toEntityType: "source",
+      toEntityId: "source_1",
+      linkReason: "source_match",
+      confidence: 1,
+    });
+
+    expect(repos.itemLinks.listByItem("item_1")).toEqual([
+      {
+        id: "link_1",
+        fromItemId: "item_1",
+        toEntityType: "source",
+        toEntityId: "source_1",
+        linkReason: "source_match",
+        confidence: 1,
+      },
+    ]);
+  });
+
   it("round-trips sources and raw snapshots through repository mappings", () => {
     const repos = createTestRepositories();
 

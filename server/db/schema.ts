@@ -74,5 +74,23 @@ export function applySchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS property_listings_watch_status_idx
       ON property_listings(watch_status);
+
+    CREATE TABLE IF NOT EXISTS item_links (
+      id TEXT PRIMARY KEY,
+      from_item_id TEXT NOT NULL,
+      to_entity_type TEXT NOT NULL,
+      to_entity_id TEXT NOT NULL,
+      link_reason TEXT NOT NULL,
+      confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (from_item_id) REFERENCES items(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS item_links_from_item_id_idx
+      ON item_links(from_item_id);
+
+    CREATE INDEX IF NOT EXISTS item_links_target_idx
+      ON item_links(to_entity_type, to_entity_id);
   `);
 }

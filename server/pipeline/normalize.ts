@@ -35,7 +35,7 @@ export function normalizePropertyListing(
   _context: NormalizeContext,
 ): NormalizedPropertyListing {
   const rawAddress = cleanNullable(raw.address);
-  const rawSuburb = cleanNullable(raw.suburb ?? raw.area);
+  const rawSuburb = cleanNullable(raw.suburb) ?? cleanNullable(raw.area);
   const address = rawAddress ?? "Unknown address";
   const suburb = rawSuburb ?? "Unknown suburb";
   const title = cleanNullable(raw.title) ?? address;
