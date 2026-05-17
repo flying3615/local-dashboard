@@ -404,6 +404,8 @@ function mapPropertyListingRow(row: PropertyListingRow): PropertyListing {
 
 function serializeJsonField(value: unknown, fieldName: string): string {
   try {
+    assertJsonSerializable(value, fieldName, new WeakSet<object>());
+
     const serialized = JSON.stringify(value);
 
     if (serialized === undefined) {
@@ -418,4 +420,53 @@ function serializeJsonField(value: unknown, fieldName: string): string {
       }`,
     );
   }
+}
+
+function assertJsonSerializable(
+  value: unknown,
+  fieldName: string,
+  seen: WeakSet<object>,
+): void {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return;
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error(`${fieldName} contains a non-finite number`);
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    if (seen.has(value)) {
+      throw new Error(`${fieldName} contains a circular reference`);
+    }
+
+    seen.add(value);
+    for (const item of value) {
+      assertJsonSerializable(item, fieldName, seen);
+    }
+    seen.delete(value);
+    return;
+  }
+
+  if (typeof value === "object") {
+    if (seen.has(value)) {
+      throw new Error(`${fieldName} contains a circular reference`);
+    }
+
+    seen.add(value);
+    for (const nestedValue of Object.values(value)) {
+      assertJsonSerializable(nestedValue, fieldName, seen);
+    }
+    seen.delete(value);
+    return;
+  }
+
+  throw new Error(`${fieldName} contains ${typeof value}`);
 }

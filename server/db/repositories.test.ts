@@ -151,6 +151,28 @@ describe("repositories", () => {
         rawPayload: undefined,
       }),
     ).toThrow(/rawPayload must be JSON serializable/);
+
+    expect(() =>
+      repos.rawSnapshots.insert({
+        id: "raw_2",
+        sourceId: "source_1",
+        fetchedAt: "2026-05-17T00:00:00.000Z",
+        url: "https://example.com/listing",
+        contentHash: "hash_2",
+        rawPayload: { title: undefined },
+      }),
+    ).toThrow(/rawPayload must be JSON serializable/);
+
+    expect(() =>
+      repos.rawSnapshots.insert({
+        id: "raw_3",
+        sourceId: "source_1",
+        fetchedAt: "2026-05-17T00:00:00.000Z",
+        url: "https://example.com/listing",
+        contentHash: "hash_3",
+        rawPayload: { score: Number.NaN },
+      }),
+    ).toThrow(/rawPayload must be JSON serializable/);
   });
 
   it("updates a property listing by item id", () => {
