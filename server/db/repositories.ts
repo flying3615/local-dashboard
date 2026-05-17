@@ -49,6 +49,27 @@ type PropertyListingRow = {
   notes: string | null;
 };
 
+type SourceRow = {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  trust_level: Source["trustLevel"];
+  enabled: number;
+  refresh_interval_minutes: number;
+  last_success_at: string | null;
+  last_error: string | null;
+};
+
+type RawSnapshotRow = {
+  id: string;
+  source_id: string;
+  fetched_at: string;
+  url: string;
+  content_hash: string;
+  raw_payload: string;
+};
+
 type ItemListFilters = {
   type?: ItemType;
 };
@@ -101,6 +122,22 @@ export function createRepositories(db: AppDatabase) {
 
         return parsed;
       },
+
+      list(): Source[] {
+        const rows = db
+          .prepare("SELECT * FROM sources ORDER BY id")
+          .all() as SourceRow[];
+
+        return rows.map(mapSourceRow);
+      },
+
+      get(id: string): Source | null {
+        const row = db
+          .prepare("SELECT * FROM sources WHERE id = ?")
+          .get(id) as SourceRow | undefined;
+
+        return row === undefined ? null : mapSourceRow(row);
+      },
     },
 
     rawSnapshots: {
@@ -128,10 +165,26 @@ export function createRepositories(db: AppDatabase) {
           `,
         ).run({
           ...parsed,
-          rawPayload: JSON.stringify(parsed.rawPayload),
+          rawPayload: serializeJsonField(parsed.rawPayload, "rawPayload"),
         });
 
         return parsed;
+      },
+
+      get(id: string): RawSnapshot | null {
+        const row = db
+          .prepare("SELECT * FROM raw_snapshots WHERE id = ?")
+          .get(id) as RawSnapshotRow | undefined;
+
+        return row === undefined ? null : mapRawSnapshotRow(row);
+      },
+
+      listBySource(sourceId: string): RawSnapshot[] {
+        const rows = db
+          .prepare("SELECT * FROM raw_snapshots WHERE source_id = ? ORDER BY id")
+          .all(sourceId) as RawSnapshotRow[];
+
+        return rows.map(mapRawSnapshotRow);
       },
     },
 
@@ -249,8 +302,8 @@ export function createRepositories(db: AppDatabase) {
               @watchStatus,
               @notes
             )
-            ON CONFLICT(id) DO UPDATE SET
-              item_id = excluded.item_id,
+            ON CONFLICT(item_id) DO UPDATE SET
+              id = excluded.id,
               address = excluded.address,
               suburb = excluded.suburb,
               price = excluded.price,
@@ -283,6 +336,31 @@ export function createRepositories(db: AppDatabase) {
       },
     },
   };
+}
+
+function mapSourceRow(row: SourceRow): Source {
+  return sourceSchema.parse({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    url: row.url,
+    trustLevel: row.trust_level,
+    enabled: row.enabled === 1,
+    refreshIntervalMinutes: row.refresh_interval_minutes,
+    lastSuccessAt: row.last_success_at,
+    lastError: row.last_error,
+  });
+}
+
+function mapRawSnapshotRow(row: RawSnapshotRow): RawSnapshot {
+  return rawSnapshotSchema.parse({
+    id: row.id,
+    sourceId: row.source_id,
+    fetchedAt: row.fetched_at,
+    url: row.url,
+    contentHash: row.content_hash,
+    rawPayload: JSON.parse(row.raw_payload) as unknown,
+  });
 }
 
 function mapItemRow(row: ItemRow): Item {
@@ -322,4 +400,22 @@ function mapPropertyListingRow(row: PropertyListingRow): PropertyListing {
     watchStatus: row.watch_status,
     notes: row.notes,
   });
+}
+
+function serializeJsonField(value: unknown, fieldName: string): string {
+  try {
+    const serialized = JSON.stringify(value);
+
+    if (serialized === undefined) {
+      throw new Error("Value is not representable as JSON");
+    }
+
+    return serialized;
+  } catch (error) {
+    throw new TypeError(
+      `${fieldName} must be JSON serializable: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 }
