@@ -48,37 +48,48 @@ export async function refreshAll({
       continue;
     }
 
+    if (!shouldRefresh(source, fetchedAt)) {
+      results.push({
+        sourceId: adapter.sourceId,
+        status: "skipped",
+        recordsProcessed: 0,
+      });
+      continue;
+    }
+
     try {
       const records = await adapter.fetch();
 
-      for (const [index, record] of records.entries()) {
-        const snapshot = repositories.rawSnapshots.insert({
-          id: createSnapshotId(adapter.sourceId, fetchedAt, index, record),
-          sourceId: adapter.sourceId,
-          fetchedAt,
-          url: getRecordUrl(record) ?? source.url,
-          contentHash: hashJson(record),
-          rawPayload: record,
-        });
+      repositories.transaction(() => {
+        for (const [index, record] of records.entries()) {
+          const snapshot = repositories.rawSnapshots.insert({
+            id: createSnapshotId(adapter.sourceId, fetchedAt, index, record),
+            sourceId: adapter.sourceId,
+            fetchedAt,
+            url: getRecordUrl(record) ?? source.url,
+            contentHash: hashJson(record),
+            rawPayload: record,
+          });
 
-        const item = upsertNormalizedRecord(
-          repositories,
-          adapter,
-          source,
-          record,
-          snapshot.id,
-          fetchedAt,
-        );
+          const item = upsertNormalizedRecord(
+            repositories,
+            adapter,
+            source,
+            record,
+            snapshot.id,
+            fetchedAt,
+          );
 
-        for (const link of linkItem(item, { sources: [source] })) {
-          repositories.itemLinks.upsert(link);
+          for (const link of linkItem(item, { sources: [source] })) {
+            repositories.itemLinks.upsert(link);
+          }
         }
-      }
 
-      repositories.sources.upsert({
-        ...source,
-        lastSuccessAt: fetchedAt,
-        lastError: null,
+        repositories.sources.upsert({
+          ...source,
+          lastSuccessAt: fetchedAt,
+          lastError: null,
+        });
       });
 
       results.push({
@@ -115,11 +126,30 @@ function upsertAdapterSource(
     type: adapter.source.type,
     url: adapter.source.url,
     trustLevel: adapter.source.trustLevel,
-    enabled: adapter.source.enabled ?? true,
-    refreshIntervalMinutes: adapter.source.refreshIntervalMinutes ?? 1440,
+    enabled: existingSource?.enabled ?? adapter.source.enabled ?? true,
+    refreshIntervalMinutes:
+      existingSource?.refreshIntervalMinutes ??
+      adapter.source.refreshIntervalMinutes ??
+      1440,
     lastSuccessAt: existingSource?.lastSuccessAt ?? null,
     lastError: existingSource?.lastError ?? null,
   });
+}
+
+function shouldRefresh(source: Source, fetchedAt: string): boolean {
+  if (source.lastSuccessAt === null) {
+    return true;
+  }
+
+  const lastSuccessAt = Date.parse(source.lastSuccessAt);
+  const nextFetchedAt = Date.parse(fetchedAt);
+
+  if (Number.isNaN(lastSuccessAt) || Number.isNaN(nextFetchedAt)) {
+    return true;
+  }
+
+  const elapsedMinutes = (nextFetchedAt - lastSuccessAt) / 60_000;
+  return elapsedMinutes >= source.refreshIntervalMinutes;
 }
 
 function upsertNormalizedRecord(
@@ -130,25 +160,87 @@ function upsertNormalizedRecord(
   rawSnapshotId: string,
   fetchedAt: string,
 ): Item {
-  if (adapter.recordType === "property_listing") {
-    const normalized = normalizePropertyListing(
-      {
-        ...(record as RawPropertyListing),
-        sourceId: adapter.sourceId,
-        sourceUrl: getRecordUrl(record) ?? source.url,
-        rawSnapshotId,
-      },
-      { fetchedAt },
-    );
-    const item = repositories.items.upsert(tagItem(normalized.item));
-    repositories.properties.upsert(normalized.property);
-    return item;
+  switch (adapter.recordType) {
+    case "property_listing": {
+      const normalized = normalizePropertyListing(
+        {
+          ...(record as RawPropertyListing),
+          sourceId: adapter.sourceId,
+          sourceUrl: getRecordUrl(record) ?? source.url,
+          rawSnapshotId,
+        },
+        { fetchedAt },
+      );
+      const item = mergeExistingItemState(
+        repositories,
+        tagItem(normalized.item),
+      );
+      const property = mergeExistingPropertyState(
+        repositories,
+        normalized.property,
+      );
+      const savedItem = repositories.items.upsert(item);
+      repositories.properties.upsert(property);
+      return savedItem;
+    }
+
+    case "school_event": {
+      const item = mergeExistingItemState(
+        repositories,
+        tagSchoolEvent(
+          normalizeSchoolEvent(record, adapter, source, rawSnapshotId),
+        ),
+      );
+      return repositories.items.upsert(item);
+    }
+
+    default:
+      return assertNeverRecordType(adapter.recordType);
+  }
+}
+
+function mergeExistingItemState(repositories: Repositories, item: Item): Item {
+  const existing = repositories
+    .items
+    .list()
+    .find((candidate) => candidate.id === item.id);
+  return existing ? { ...item, status: existing.status } : item;
+}
+
+function mergeExistingPropertyState(
+  repositories: Repositories,
+  property: ReturnType<typeof normalizePropertyListing>["property"],
+): ReturnType<typeof normalizePropertyListing>["property"] {
+  const existing = repositories
+    .properties
+    .list()
+    .find((candidate) => candidate.itemId === property.itemId);
+
+  return existing
+    ? {
+        ...property,
+        watchStatus: existing.watchStatus,
+        notes: existing.notes,
+      }
+    : property;
+}
+
+function tagSchoolEvent(item: Item): Item {
+  const tags = new Set(item.tags);
+  const locationText = [item.area, item.address].filter(Boolean).join(" ");
+
+  if (/\bparaparaumu(?:\s+beach)?\b/i.test(locationText)) {
+    tags.add("paraparaumu");
   }
 
-  const item = repositories.items.upsert(
-    tagItem(normalizeSchoolEvent(record, adapter, source, rawSnapshotId)),
-  );
-  return item;
+  return {
+    ...item,
+    tags: [...tags],
+  };
+}
+
+function assertNeverRecordType(recordType: never): never {
+  throw new Error(`Unsupported adapter record type: ${String(recordType)}`);
 }
 
 function normalizeSchoolEvent(
@@ -212,7 +304,7 @@ function hashJson(value: unknown): string {
 }
 
 function stableHash(value: string): string {
-  return createHash("sha256").update(value).digest("hex").slice(0, 16);
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function stableJsonStringify(value: unknown): string {

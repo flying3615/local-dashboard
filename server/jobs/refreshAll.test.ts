@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { SourceAdapter } from "../adapters/types";
 import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
 import { createInMemoryDatabase } from "../db/database";
@@ -101,5 +102,185 @@ describe("refreshAll", () => {
         linkReason: "source_match",
       }),
     ]);
+  });
+
+  it("preserves disabled sources without fetching them", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    const adapter = createMockPropertyAdapter();
+
+    repos.sources.upsert({
+      id: adapter.sourceId,
+      name: adapter.source.name,
+      type: adapter.source.type,
+      url: adapter.source.url,
+      trustLevel: adapter.source.trustLevel,
+      enabled: false,
+      refreshIntervalMinutes: 720,
+      lastSuccessAt: null,
+      lastError: null,
+    });
+
+    const result = await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-17T00:00:00.000Z",
+    });
+
+    expect(result).toEqual([
+      { sourceId: adapter.sourceId, status: "skipped", recordsProcessed: 0 },
+    ]);
+    expect(repos.sources.get(adapter.sourceId)).toMatchObject({
+      enabled: false,
+      lastSuccessAt: null,
+    });
+    expect(repos.rawSnapshots.listBySource(adapter.sourceId)).toHaveLength(0);
+  });
+
+  it("skips enabled sources when refresh interval has not elapsed", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    let fetchCount = 0;
+    const adapter: SourceAdapter = {
+      ...createMockPropertyAdapter(),
+      async fetch() {
+        fetchCount += 1;
+        return createMockPropertyAdapter().fetch();
+      },
+    };
+
+    await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-17T00:00:00.000Z",
+    });
+    const result = await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-17T01:00:00.000Z",
+    });
+
+    expect(fetchCount).toBe(1);
+    expect(result).toEqual([
+      { sourceId: adapter.sourceId, status: "skipped", recordsProcessed: 0 },
+    ]);
+  });
+
+  it("continues refreshing later adapters when one adapter fails", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    const failingAdapter: SourceAdapter = {
+      ...createMockPropertyAdapter(),
+      async fetch() {
+        throw new Error("Mock failure");
+      },
+    };
+
+    const result = await refreshAll({
+      repositories: repos,
+      adapters: [failingAdapter, createMockSchoolAdapter()],
+      now: () => "2026-05-17T00:00:00.000Z",
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        sourceId: failingAdapter.sourceId,
+        status: "error",
+        recordsProcessed: 0,
+      }),
+      expect.objectContaining({
+        sourceId: "mock_schools",
+        status: "success",
+        recordsProcessed: 1,
+      }),
+    ]);
+    expect(repos.items.list({ type: "school_event" })).toHaveLength(1);
+  });
+
+  it("rolls back adapter records when normalization fails", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    const adapter: SourceAdapter = {
+      ...createMockPropertyAdapter(),
+      async fetch() {
+        return [
+          {
+            address: "99 Broken Street, Paraparaumu",
+            sourceUrl: "https://example.com/broken-property",
+            platform: "Mock Realty",
+            suburb: "Paraparaumu",
+            bedrooms: -1,
+          },
+        ];
+      },
+    };
+
+    const result = await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-17T00:00:00.000Z",
+    });
+
+    expect(result[0]).toMatchObject({
+      sourceId: adapter.sourceId,
+      status: "error",
+      recordsProcessed: 0,
+    });
+    expect(repos.rawSnapshots.listBySource(adapter.sourceId)).toHaveLength(0);
+    expect(repos.items.list({ type: "property_listing" })).toHaveLength(0);
+    expect(repos.properties.list()).toHaveLength(0);
+  });
+
+  it("preserves user-managed item and property state across refreshes", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    const adapter = createMockPropertyAdapter();
+    const firstRefreshAt = () => "2026-05-17T00:00:00.000Z";
+    const secondRefreshAt = () => "2026-05-17T13:00:00.000Z";
+
+    await refreshAll({ repositories: repos, adapters: [adapter], now: firstRefreshAt });
+
+    const item = repos.items.list({ type: "property_listing" })[0]!;
+    const property = repos.properties.list()[0]!;
+
+    repos.items.upsert({ ...item, status: "reviewed" });
+    repos.properties.upsert({
+      ...property,
+      watchStatus: "watching",
+      notes: "Worth checking",
+    });
+
+    await refreshAll({ repositories: repos, adapters: [adapter], now: secondRefreshAt });
+
+    expect(repos.items.list({ type: "property_listing" })[0]).toMatchObject({
+      id: item.id,
+      status: "reviewed",
+    });
+    expect(repos.properties.list()[0]).toMatchObject({
+      itemId: item.id,
+      watchStatus: "watching",
+      notes: "Worth checking",
+    });
+  });
+
+  it("does not tag school events as open homes", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+
+    await refreshAll({
+      repositories: repos,
+      adapters: [createMockSchoolAdapter()],
+      now: () => "2026-05-17T00:00:00.000Z",
+    });
+
+    expect(repos.items.list({ type: "school_event" })[0]?.tags).not.toContain(
+      "open_home_soon",
+    );
   });
 });

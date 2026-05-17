@@ -87,6 +87,10 @@ type ItemListFilters = {
 
 export function createRepositories(db: AppDatabase) {
   return {
+    transaction<T>(work: () => T): T {
+      return db.transaction(work)();
+    },
+
     sources: {
       upsert(source: Source): Source {
         const parsed = sourceSchema.parse(source);
