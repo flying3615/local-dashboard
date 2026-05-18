@@ -24,21 +24,24 @@ describe("sourceConfig", () => {
           adapter: expect.objectContaining({
             sourceId: "education_counts",
           }),
-          status: "not_implemented",
+          status: "active",
         }),
         expect.objectContaining({
           adapter: expect.objectContaining({
             sourceId: "kapiti_council",
           }),
-          status: "not_implemented",
+          status: "active",
         }),
       ]),
     );
   });
 
-  it("returns no active adapters when all are not_implemented", () => {
+  it("returns implemented official adapters as active adapters", () => {
     const active = activeAdapters();
-    expect(active).toHaveLength(0);
+    expect(active.map((adapter) => adapter.sourceId)).toEqual([
+      "education_counts",
+      "kapiti_council",
+    ]);
   });
 
   it("returns mock adapters for seed data", () => {

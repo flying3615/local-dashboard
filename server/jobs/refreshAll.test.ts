@@ -296,4 +296,169 @@ describe("refreshAll", () => {
       "open_home_soon",
     );
   });
+
+  it("persists school profile records from official source adapters", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    const adapter: SourceAdapter = {
+      sourceId: "education_counts",
+      recordType: "school_profile",
+      source: {
+        name: "Education Counts",
+        type: "official_api",
+        url: "https://www.educationcounts.govt.nz/directories/school-directory-api",
+        trustLevel: "official",
+        enabled: true,
+        refreshIntervalMinutes: 1440,
+      },
+      async fetch() {
+        return [
+          {
+            schoolId: "248",
+            schoolName: "Paraparaumu College",
+            schoolType: "Secondary (Year 9-15)",
+            years: "Year 9-15",
+            gender: "co-ed",
+            authority: "State",
+            hasZone: true,
+            website: "http://www.paraparaumucollege.school.nz",
+            area: "Paraparaumu",
+            address: "Mazengarb Road, Paraparaumu",
+            roll: 1540,
+            sourceUrl: "http://www.paraparaumucollege.school.nz",
+            tags: ["school", "secondary", "wellington_region"],
+          },
+        ];
+      },
+    };
+
+    await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-18T00:00:00.000Z",
+    });
+
+    expect(repos.items.list({ type: "school_profile" })).toEqual([
+      expect.objectContaining({
+        title: "Paraparaumu College",
+        summary: expect.stringContaining("Roll 1540"),
+        sourceId: "education_counts",
+        tags: expect.arrayContaining(["school", "secondary"]),
+      }),
+    ]);
+    expect(repos.schools.list()).toEqual([
+      expect.objectContaining({
+        id: "school_248",
+        name: "Paraparaumu College",
+        area: "Paraparaumu",
+        hasZone: true,
+        watchStatus: "new",
+      }),
+    ]);
+  });
+
+  it("merges official school profiles into existing same-name schools with events", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    const officialAdapter: SourceAdapter = {
+      sourceId: "education_counts",
+      recordType: "school_profile",
+      source: {
+        name: "Education Counts",
+        type: "official_api",
+        url: "https://www.educationcounts.govt.nz/directories/school-directory-api",
+        trustLevel: "official",
+        enabled: true,
+        refreshIntervalMinutes: 1440,
+      },
+      async fetch() {
+        return [
+          {
+            schoolId: "248",
+            schoolName: "Paraparaumu College",
+            schoolType: "Secondary (Year 9-15)",
+            years: "Year 9-15",
+            gender: "co-ed",
+            authority: "State",
+            hasZone: true,
+            website: "http://www.paraparaumucollege.school.nz",
+            area: "Paraparaumu",
+            sourceUrl: "http://www.paraparaumucollege.school.nz",
+            tags: ["school", "secondary", "wellington_region"],
+          },
+        ];
+      },
+    };
+
+    await refreshAll({
+      repositories: repos,
+      adapters: [createMockSchoolAdapter()],
+      now: () => "2026-05-18T00:00:00.000Z",
+    });
+    await refreshAll({
+      repositories: repos,
+      adapters: [officialAdapter],
+      now: () => "2026-05-19T00:00:00.000Z",
+    });
+
+    const schools = repos.schools.list().filter((school) =>
+      school.name === "Paraparaumu College"
+    );
+    expect(schools).toHaveLength(1);
+    expect(schools[0]).toMatchObject({
+      name: "Paraparaumu College",
+      website: "http://www.paraparaumucollege.school.nz",
+      hasZone: true,
+    });
+    expect(repos.schoolEvents.listBySchool(schools[0]!.id)).toHaveLength(1);
+  });
+
+  it("persists council notice records from official source adapters", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    const adapter: SourceAdapter = {
+      sourceId: "kapiti_council",
+      recordType: "council_notice",
+      source: {
+        name: "Kāpiti Coast District Council Open Data",
+        type: "official_open_data",
+        url: "https://data-kcdc.opendata.arcgis.com/",
+        trustLevel: "official",
+        enabled: true,
+        refreshIntervalMinutes: 1440,
+      },
+      async fetch() {
+        return [
+          {
+            title: "Flood Hazard Zones",
+            summary: "Latest flood hazard zone layer.",
+            sourceUrl:
+              "https://data-kcdc.opendata.arcgis.com/datasets/KCDC::flood-hazard-zones",
+            publishedAt: "2026-05-15T03:58:36.000Z",
+            area: "Kāpiti Coast District",
+            tags: ["kapiti", "council", "open_data", "hazard"],
+          },
+        ];
+      },
+    };
+
+    await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-18T00:00:00.000Z",
+    });
+
+    expect(repos.items.list({ type: "council_notice" })).toEqual([
+      expect.objectContaining({
+        title: "Flood Hazard Zones",
+        summary: "Latest flood hazard zone layer.",
+        sourceId: "kapiti_council",
+        publishedAt: "2026-05-15T03:58:36.000Z",
+        tags: expect.arrayContaining(["kapiti", "council", "hazard"]),
+      }),
+    ]);
+  });
 });

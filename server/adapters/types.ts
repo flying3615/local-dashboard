@@ -1,6 +1,10 @@
 import type { TrustLevel } from "../domain/types";
 
-export type AdapterRecordType = "property_listing" | "school_event";
+export type AdapterRecordType =
+  | "property_listing"
+  | "school_event"
+  | "school_profile"
+  | "council_notice";
 
 export interface SourceAdapterMetadata {
   name: string;

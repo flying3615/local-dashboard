@@ -37,6 +37,7 @@ function emptyDashboard() {
       new_listings: [],
       upcoming_open_homes: [],
       school_events: [],
+      local_updates: [],
       needs_review: [],
       recent_activity: [],
     },

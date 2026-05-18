@@ -5,6 +5,7 @@ export interface DashboardSections {
   new_listings: Item[];
   upcoming_open_homes: Item[];
   school_events: Item[];
+  local_updates: Item[];
   needs_review: Item[];
   recent_activity: Item[];
 }
@@ -44,6 +45,7 @@ const sectionDefs: Array<{ key: keyof DashboardSections; label: string }> = [
   { key: "new_listings", label: "New Listings" },
   { key: "upcoming_open_homes", label: "Upcoming Open Homes" },
   { key: "school_events", label: "School Events" },
+  { key: "local_updates", label: "Local Updates" },
   { key: "needs_review", label: "Needs Review" },
   { key: "recent_activity", label: "Recent Activity" },
 ];
@@ -55,7 +57,7 @@ export function Dashboard({ sections, sources }: DashboardProps) {
         <Section
           key={key}
           title={label}
-          items={sections[key]}
+          items={sections[key] ?? []}
           sources={sources}
         />
       ))}

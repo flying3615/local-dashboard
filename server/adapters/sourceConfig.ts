@@ -19,8 +19,8 @@ export function allConfiguredAdapters(): ConfiguredAdapter[] {
   return [
     { adapter: createTradeMeAdapter(), status: "not_implemented" },
     { adapter: createRealestateAdapter(), status: "not_implemented" },
-    { adapter: createEducationCountsAdapter(), status: "not_implemented" },
-    { adapter: createKapitiCouncilAdapter(), status: "not_implemented" },
+      { adapter: createEducationCountsAdapter(), status: "active" },
+      { adapter: createKapitiCouncilAdapter(), status: "active" },
   ];
 }
 

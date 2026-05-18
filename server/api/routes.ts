@@ -30,6 +30,14 @@ export function createApiRoutes(
         item.tags.includes("open_home_soon"),
       ),
       school_events: items.filter((item) => item.type === "school_event"),
+      local_updates: items.filter((item) =>
+        [
+          "council_notice",
+          "local_news",
+          "community_event",
+          "transport_alert",
+        ].includes(item.type),
+      ),
       needs_review: items.filter((item) =>
         item.tags.includes("needs_manual_address_check"),
       ),

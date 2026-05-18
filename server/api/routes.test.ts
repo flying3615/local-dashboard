@@ -53,6 +53,7 @@ describe("API routes", () => {
     expect(body.sections).toHaveProperty("new_listings");
     expect(body.sections).toHaveProperty("upcoming_open_homes");
     expect(body.sections).toHaveProperty("school_events");
+    expect(body.sections).toHaveProperty("local_updates");
     expect(body.sections).toHaveProperty("needs_review");
     expect(body.sections).toHaveProperty("recent_activity");
   });

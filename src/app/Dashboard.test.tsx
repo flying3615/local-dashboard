@@ -44,6 +44,7 @@ describe("Dashboard", () => {
       new_listings: [makeItem()],
       upcoming_open_homes: [],
       school_events: [],
+      local_updates: [],
       needs_review: [],
       recent_activity: [],
     };
@@ -61,6 +62,7 @@ describe("Dashboard", () => {
       new_listings: [],
       upcoming_open_homes: [],
       school_events: [],
+      local_updates: [],
       needs_review: [],
       recent_activity: [],
     };
@@ -82,6 +84,7 @@ describe("Dashboard", () => {
       new_listings: [],
       upcoming_open_homes: [],
       school_events: [],
+      local_updates: [],
       needs_review: [item],
       recent_activity: [],
     };
@@ -91,5 +94,28 @@ describe("Dashboard", () => {
     expect(screen.getByText("Needs Review (1)")).toBeInTheDocument();
     expect(screen.getByText("Unknown Address Listing")).toBeInTheDocument();
     expect(screen.getByText("needs manual address check")).toBeInTheDocument();
+  });
+
+  it("shows local updates from council notice items", () => {
+    const item = makeItem({
+      id: "item_3",
+      type: "council_notice" as const,
+      title: "Flood Hazard Zones",
+      summary: "Latest flood hazard zone layer.",
+      tags: ["kapiti", "council", "hazard"],
+    });
+    const sections = {
+      new_listings: [],
+      upcoming_open_homes: [],
+      school_events: [],
+      local_updates: [item],
+      needs_review: [],
+      recent_activity: [],
+    };
+
+    render(<Dashboard sections={sections} sources={[makeSource()]} />);
+
+    expect(screen.getByText("Local Updates (1)")).toBeInTheDocument();
+    expect(screen.getByText("Flood Hazard Zones")).toBeInTheDocument();
   });
 });

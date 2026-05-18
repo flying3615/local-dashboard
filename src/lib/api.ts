@@ -14,6 +14,7 @@ export interface DashboardSections {
   new_listings: Item[];
   upcoming_open_homes: Item[];
   school_events: Item[];
+  local_updates: Item[];
   needs_review: Item[];
   recent_activity: Item[];
 }

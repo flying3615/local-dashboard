@@ -895,3 +895,23 @@ git commit -m "docs: outline cloudflare deployment path"
 - Keep all information source links visible in the UI.
 - Mark uncertain address, school zone, sale price, and source data clearly instead of hiding uncertainty.
 - Keep Cloudflare portability in mind, but do not migrate to Workers and D1 until the local dashboard, data model, and adapters are stable.
+
+## Task 15: Connect First Official Data Sources
+
+**Status:** Completed on 2026-05-18.
+
+Implemented:
+
+- Education Counts Schools Directory API as an official `school_profile` adapter for Wellington Region secondary, composite, and area schools.
+- Kāpiti Coast District Council ArcGIS Hub RSS as an official `council_notice` adapter.
+- Refresh pipeline support for `school_profile` and `council_notice` records.
+- Dashboard `Local Updates` section for council/local information items.
+- Same-name school merge behavior so official profiles enrich existing school-event cards instead of creating duplicates.
+
+Verification:
+
+- `npm test`
+- `npm run build`
+- Live refresh through local API:
+  - `education_counts`: 54 records processed.
+  - `kapiti_council`: 90 records processed.

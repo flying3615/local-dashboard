@@ -204,6 +204,35 @@ function upsertNormalizedRecord(
       return savedItem;
     }
 
+    case "school_profile": {
+      const normalizedItem = normalizeSchoolProfile(
+        record,
+        adapter,
+        source,
+        rawSnapshotId,
+      );
+      const item = mergeExistingItemState(
+        repositories,
+        tagSchoolEvent(normalizedItem),
+      );
+      const savedItem = repositories.items.upsert(item);
+      repositories.schools.upsert(
+        mergeExistingSchoolState(
+          repositories,
+          createSchoolFromProfileRecord(record, savedItem),
+        ),
+      );
+      return savedItem;
+    }
+
+    case "council_notice": {
+      const item = mergeExistingItemState(
+        repositories,
+        normalizeCouncilNotice(record, adapter, source, rawSnapshotId),
+      );
+      return repositories.items.upsert(item);
+    }
+
     default:
       return assertNeverRecordType(adapter.recordType);
   }
@@ -269,6 +298,43 @@ function createSchoolFromEventRecord(record: unknown, item: Item): School {
   };
 }
 
+function createSchoolFromProfileRecord(record: unknown, item: Item): School {
+  const raw = assertRecord(record, item.sourceId);
+  const schoolId = getString(raw, "schoolId");
+  const schoolName = requireString(raw, "schoolName", item.sourceId);
+  const website = getString(raw, "website") ?? item.sourceUrl;
+
+  return {
+    id: schoolId ? `school_${schoolId}` : `school_${stableHash(schoolName)}`,
+    name: schoolName,
+    schoolType: getString(raw, "schoolType") ?? "secondary",
+    years: getString(raw, "years") ?? "Year 9-15",
+    gender: getString(raw, "gender") ?? "unknown",
+    authority: getString(raw, "authority") ?? "unknown",
+    hasZone: getBoolean(raw, "hasZone"),
+    website,
+    area: item.area ?? "Wellington Region",
+    commuteFromParaparaumu: getString(raw, "commuteFromParaparaumu"),
+    watchStatus: "new",
+  };
+}
+
+function mergeExistingSchoolState(
+  repositories: Repositories,
+  school: School,
+): School {
+  const existing = repositories.schools.list().find((candidate) => {
+    return (
+      candidate.id === school.id ||
+      candidate.name.toLocaleLowerCase() === school.name.toLocaleLowerCase()
+    );
+  });
+
+  return existing
+    ? { ...school, id: existing.id, watchStatus: existing.watchStatus }
+    : school;
+}
+
 function createSchoolEventFromItem(
   record: unknown,
   schoolId: string,
@@ -289,6 +355,78 @@ function createSchoolEventFromItem(
 
 function assertNeverRecordType(recordType: never): never {
   throw new Error(`Unsupported adapter record type: ${String(recordType)}`);
+}
+
+function normalizeSchoolProfile(
+  record: unknown,
+  adapter: SourceAdapter,
+  source: Source,
+  rawSnapshotId: string,
+): Item {
+  const raw = assertRecord(record, adapter.sourceId);
+  const schoolId = getString(raw, "schoolId");
+  const schoolName = requireString(raw, "schoolName", adapter.sourceId);
+  const sourceUrl = getString(raw, "sourceUrl") ?? source.url;
+  const roll = getNumber(raw, "roll");
+  const schoolType = getString(raw, "schoolType");
+  const area = getString(raw, "area") ?? "Wellington Region";
+  const summaryParts = [
+    schoolType,
+    getString(raw, "years"),
+    roll === null ? null : `Roll ${roll}`,
+    getBoolean(raw, "hasZone") === null
+      ? null
+      : getBoolean(raw, "hasZone")
+        ? "Has enrolment zone"
+        : "No enrolment zone",
+  ].filter((part): part is string => part !== null);
+
+  return {
+    id: `item_${stableHash(
+      `${adapter.sourceId}|${schoolId ?? schoolName}|${sourceUrl}`,
+    )}`,
+    type: "school_profile",
+    title: schoolName,
+    summary: summaryParts.join(" · "),
+    sourceId: adapter.sourceId,
+    sourceUrl,
+    area,
+    address: getString(raw, "address"),
+    publishedAt: null,
+    startsAt: null,
+    endsAt: null,
+    status: "new",
+    tags: getStringArray(raw, "tags"),
+    rawSnapshotId,
+  };
+}
+
+function normalizeCouncilNotice(
+  record: unknown,
+  adapter: SourceAdapter,
+  source: Source,
+  rawSnapshotId: string,
+): Item {
+  const raw = assertRecord(record, adapter.sourceId);
+  const sourceUrl = getString(raw, "sourceUrl") ?? source.url;
+  const title = requireString(raw, "title", adapter.sourceId);
+
+  return {
+    id: `item_${stableHash(`${adapter.sourceId}|${sourceUrl}|${title}`)}`,
+    type: "council_notice",
+    title,
+    summary: getString(raw, "summary") ?? title,
+    sourceId: adapter.sourceId,
+    sourceUrl,
+    area: getString(raw, "area") ?? "Kāpiti Coast District",
+    address: getString(raw, "address"),
+    publishedAt: getString(raw, "publishedAt"),
+    startsAt: null,
+    endsAt: null,
+    status: "new",
+    tags: getStringArray(raw, "tags"),
+    rawSnapshotId,
+  };
 }
 
 function normalizeSchoolEvent(
