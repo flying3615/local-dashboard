@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { DashboardResponse, PropertyDetail as PropertyDetailType, PropertyWithItem, SchoolWithEvents } from "../lib/api";
-import { getDashboard, getProperties, getProperty, getSchools, getSources } from "../lib/api";
+import type {
+  DashboardResponse,
+  KapitiPropertyRecord,
+  PropertyDetail as PropertyDetailType,
+  PropertyWithItem,
+  SchoolWithEvents,
+} from "../lib/api";
+import {
+  getDashboard,
+  getProperties,
+  getProperty,
+  getSchools,
+  getSources,
+  searchPropertyRecords,
+} from "../lib/api";
 import type { Source } from "../lib/types";
 import { Dashboard } from "./Dashboard";
 import { PropertyDetail } from "./PropertyDetail";
@@ -16,6 +29,7 @@ export function App() {
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [properties, setProperties] = useState<PropertyWithItem[]>([]);
+  const [officialPropertyRecords, setOfficialPropertyRecords] = useState<KapitiPropertyRecord[]>([]);
   const [schools, setSchools] = useState<SchoolWithEvents[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [propertyDetail, setPropertyDetail] = useState<PropertyDetailType | null>(null);
@@ -65,6 +79,10 @@ export function App() {
     } catch {
       // keep stale data
     }
+  }, []);
+
+  const handleSearchOfficialRecords = useCallback(async (query: string) => {
+    setOfficialPropertyRecords(await searchPropertyRecords(query));
   }, []);
 
   useEffect(() => {
@@ -132,6 +150,8 @@ export function App() {
         {!loading && !error && activeTab === "properties" && !selectedPropertyId && (
           <PropertyList
             properties={properties}
+            officialRecords={officialPropertyRecords}
+            onSearchOfficialRecords={handleSearchOfficialRecords}
             onSelectProperty={loadPropertyDetail}
           />
         )}

@@ -44,6 +44,22 @@ export interface SchoolWithEvents {
   notes: Note[];
 }
 
+export interface KapitiPropertyRecord {
+  id: string;
+  valuationId: string | null;
+  propertyNumber: number | null;
+  address: string;
+  legalDescription: string | null;
+  landValue: number | null;
+  capitalValue: number | null;
+  improvementsValue: number | null;
+  hectares: number | null;
+  valuationDate: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  sourceUrl: string;
+}
+
 export interface RefreshResult {
   sourceId: string;
   status: "success" | "skipped" | "error";
@@ -69,6 +85,14 @@ export function getSchools(): Promise<SchoolWithEvents[]> {
 
 export function getSources(): Promise<Source[]> {
   return request<Source[]>("/sources");
+}
+
+export function searchPropertyRecords(
+  query: string,
+): Promise<KapitiPropertyRecord[]> {
+  return request<KapitiPropertyRecord[]>(
+    `/property-records/search?q=${encodeURIComponent(query)}`,
+  );
 }
 
 export function refreshSource(id: string): Promise<RefreshResult> {

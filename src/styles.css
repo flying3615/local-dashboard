@@ -245,6 +245,59 @@
 }
 
 /* ---- Property List ---- */
+.official-lookup {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.official-lookup label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.lookup-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.lookup-controls input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font: inherit;
+}
+
+.lookup-controls button {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 7px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lookup-controls button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.lookup-error {
+  color: var(--color-error);
+  margin-top: 8px;
+}
+
+.official-records {
+  margin-bottom: 18px;
+}
+
 .property-table {
   width: 100%;
   border-collapse: collapse;

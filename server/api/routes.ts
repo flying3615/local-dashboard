@@ -5,10 +5,17 @@ import { createHash } from "node:crypto";
 import type { SourceAdapter } from "../adapters/types";
 import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
+import { searchKapitiPropertyRecords } from "../adapters/kapitiPropertyRecords";
+import type { KapitiPropertyRecord } from "../adapters/kapitiPropertyRecords";
 import type { createRepositories } from "../db/repositories";
 import { refreshAll } from "../jobs/refreshAll";
 
 type Repositories = ReturnType<typeof createRepositories>;
+type SearchPropertyRecords = (query: string) => Promise<KapitiPropertyRecord[]>;
+
+export interface CreateApiRoutesOptions {
+  searchPropertyRecords?: SearchPropertyRecords;
+}
 
 export function createApiRoutes(
   repositories: Repositories,
@@ -16,8 +23,11 @@ export function createApiRoutes(
     createMockPropertyAdapter(),
     createMockSchoolAdapter(),
   ],
+  options: CreateApiRoutesOptions = {},
 ): Router {
   const router = Router();
+  const searchPropertyRecords =
+    options.searchPropertyRecords ?? searchKapitiPropertyRecords;
 
   router.get("/dashboard", (_req: Request, res: Response) => {
     const items = repositories.items.list();
@@ -30,13 +40,15 @@ export function createApiRoutes(
         item.tags.includes("open_home_soon"),
       ),
       school_events: items.filter((item) => item.type === "school_event"),
-      local_updates: items.filter((item) =>
-        [
-          "council_notice",
-          "local_news",
-          "community_event",
-          "transport_alert",
-        ].includes(item.type),
+      local_updates: byNewest(
+        items.filter((item) =>
+          [
+            "council_notice",
+            "local_news",
+            "community_event",
+            "transport_alert",
+          ].includes(item.type),
+        ),
       ),
       needs_review: items.filter((item) =>
         item.tags.includes("needs_manual_address_check"),
@@ -90,6 +102,23 @@ export function createApiRoutes(
     res.json({ item, property: property ?? null, source, links, notes });
   });
 
+  router.get("/property-records/search", async (req: Request, res: Response) => {
+    const query = String(req.query.q ?? "").trim();
+
+    if (query.length < 2) {
+      res.status(400).json({ error: "Query must contain at least 2 characters" });
+      return;
+    }
+
+    try {
+      res.json(await searchPropertyRecords(query));
+    } catch (error) {
+      res.status(502).json({
+        error: error instanceof Error ? error.message : "Property lookup failed",
+      });
+    }
+  });
+
   router.get("/schools", (_req: Request, res: Response) => {
     const schools = repositories.schools.list();
 
@@ -125,6 +154,24 @@ export function createApiRoutes(
   });
 
   return router;
+}
+
+function byNewest<T extends { publishedAt: string | null; startsAt: string | null }>(
+  items: T[],
+): T[] {
+  return [...items].sort((left, right) => {
+    return itemTime(right) - itemTime(left);
+  });
+}
+
+function itemTime(item: { publishedAt: string | null; startsAt: string | null }) {
+  const value = item.publishedAt ?? item.startsAt;
+  if (value === null) {
+    return 0;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 export function seedMockData(repositories: Repositories): void {

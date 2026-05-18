@@ -915,3 +915,25 @@ Verification:
 - Live refresh through local API:
   - `education_counts`: 54 records processed.
   - `kapiti_council`: 90 records processed.
+
+## Task 16: Add Official KCDC Property Lookup
+
+**Status:** Completed on 2026-05-18.
+
+Implemented:
+
+- KCDC `Property_Public` ArcGIS Feature Layer lookup for address/street searches.
+- API endpoint: `GET /api/property-records/search?q=...`.
+- Properties tab official lookup form with KCDC valuation fields:
+  - capital value
+  - land value
+  - hectares
+  - valuation date
+  - source link
+- Dashboard local updates sorted newest-first by published date.
+
+Verification:
+
+- `npm test`
+- `npm run build`
+- Live API lookup for `545 State Highway 1` returned KCDC property records from the official layer.

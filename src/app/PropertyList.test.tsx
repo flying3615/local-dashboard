@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { PropertyList } from "./PropertyList";
+import type { KapitiPropertyRecord } from "../lib/api";
 
 function makeProperty(overrides = {}) {
   return {
@@ -82,5 +83,44 @@ describe("PropertyList", () => {
 
     await user.click(screen.getByText("12 Example Street, Paraparaumu"));
     expect(onSelect).toHaveBeenCalledWith("item_1");
+  });
+
+  it("searches and renders official KCDC property records", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    const officialRecords: KapitiPropertyRecord[] = [
+      {
+        id: "kcdc_property_722260",
+        valuationId: "1494100400",
+        propertyNumber: 4811,
+        address: "545 State Highway 1, Paraparaumu",
+        legalDescription: "PT LOT 79 DP 14701",
+        landValue: 570000,
+        capitalValue: 590000,
+        improvementsValue: 20000,
+        hectares: 1.7585,
+        valuationDate: "2023-08-01T00:00:00.000Z",
+        latitude: -40.88217347,
+        longitude: 175.06090763,
+        sourceUrl:
+          "https://maps.kapiticoast.govt.nz/server/rest/services/Public/Property_Public/MapServer/0",
+      },
+    ];
+
+    render(
+      <PropertyList
+        properties={[]}
+        officialRecords={officialRecords}
+        onSearchOfficialRecords={onSearch}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Official property lookup"), "545 State Highway");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(onSearch).toHaveBeenCalledWith("545 State Highway");
+    expect(screen.getByText("545 State Highway 1, Paraparaumu")).toBeInTheDocument();
+    expect(screen.getByText("$590,000")).toBeInTheDocument();
+    expect(screen.getByText("1.7585 ha")).toBeInTheDocument();
   });
 });

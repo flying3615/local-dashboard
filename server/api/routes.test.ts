@@ -12,7 +12,29 @@ function createTestApp() {
   const repos = createRepositories(db);
   const app = express();
   app.use(express.json());
-  app.use("/api", createApiRoutes(repos));
+  app.use(
+    "/api",
+    createApiRoutes(repos, undefined, {
+      searchPropertyRecords: async (query) => [
+        {
+          id: "kcdc_property_722260",
+          valuationId: "1494100400",
+          propertyNumber: 4811,
+          address: `${query} Road, Paraparaumu`,
+          legalDescription: "PT LOT 79 DP 14701",
+          landValue: 570000,
+          capitalValue: 590000,
+          improvementsValue: 20000,
+          hectares: 1.7585,
+          valuationDate: "2023-08-01T00:00:00.000Z",
+          latitude: -40.88217347,
+          longitude: 175.06090763,
+          sourceUrl:
+            "https://maps.kapiticoast.govt.nz/server/rest/services/Public/Property_Public/MapServer/0",
+        },
+      ],
+    }),
+  );
   return { app, db, repos };
 }
 
@@ -58,6 +80,60 @@ describe("API routes", () => {
     expect(body.sections).toHaveProperty("recent_activity");
   });
 
+  it("GET /api/dashboard sorts local updates by published date descending", async () => {
+    repos.sources.upsert({
+      id: "kapiti_council",
+      name: "Kāpiti Council",
+      type: "official_open_data",
+      url: "https://data-kcdc.opendata.arcgis.com/",
+      trustLevel: "official",
+      enabled: true,
+      refreshIntervalMinutes: 1440,
+      lastSuccessAt: null,
+      lastError: null,
+    });
+    repos.items.upsert({
+      id: "old_notice",
+      type: "council_notice",
+      title: "Old update",
+      summary: "Old",
+      sourceId: "kapiti_council",
+      sourceUrl: "https://example.com/old",
+      area: "Kāpiti Coast District",
+      address: null,
+      publishedAt: "2024-01-01T00:00:00.000Z",
+      startsAt: null,
+      endsAt: null,
+      status: "new",
+      tags: ["kapiti"],
+      rawSnapshotId: null,
+    });
+    repos.items.upsert({
+      id: "new_notice",
+      type: "council_notice",
+      title: "New update",
+      summary: "New",
+      sourceId: "kapiti_council",
+      sourceUrl: "https://example.com/new",
+      area: "Kāpiti Coast District",
+      address: null,
+      publishedAt: "2026-05-15T00:00:00.000Z",
+      startsAt: null,
+      endsAt: null,
+      status: "new",
+      tags: ["kapiti"],
+      rawSnapshotId: null,
+    });
+
+    const res = await fetch(`${url}/api/dashboard`);
+    const body = await res.json();
+
+    expect(body.sections.local_updates.map((item: { title: string }) => item.title)).toEqual([
+      "New update",
+      "Old update",
+    ]);
+  });
+
   it("GET /api/properties returns empty array when no data seeded", async () => {
     const res = await fetch(`${url}/api/properties`);
     expect(res.status).toBe(200);
@@ -70,6 +146,29 @@ describe("API routes", () => {
   it("GET /api/properties/:id returns 404 for unknown property", async () => {
     const res = await fetch(`${url}/api/properties/nonexistent`);
     expect(res.status).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+  });
+
+  it("GET /api/property-records/search returns official KCDC property records", async () => {
+    const res = await fetch(`${url}/api/property-records/search?q=Otaihanga`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body).toEqual([
+      expect.objectContaining({
+        id: "kcdc_property_722260",
+        address: "Otaihanga Road, Paraparaumu",
+        capitalValue: 590000,
+        sourceUrl: expect.stringContaining("Property_Public"),
+      }),
+    ]);
+  });
+
+  it("GET /api/property-records/search validates query length", async () => {
+    const res = await fetch(`${url}/api/property-records/search?q=a`);
+    expect(res.status).toBe(400);
 
     const body = await res.json();
     expect(body).toHaveProperty("error");
