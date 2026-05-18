@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { SourceAdapter } from "../adapters/types";
 import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
-import type { Item, Source } from "../domain/types";
+import type { Item, School, SchoolEvent, Source } from "../domain/types";
 import type { createRepositories } from "../db/repositories";
 import { linkItem } from "../pipeline/link";
 import {
@@ -185,13 +185,23 @@ function upsertNormalizedRecord(
     }
 
     case "school_event": {
+      const normalizedItem = normalizeSchoolEvent(
+        record,
+        adapter,
+        source,
+        rawSnapshotId,
+      );
       const item = mergeExistingItemState(
         repositories,
-        tagSchoolEvent(
-          normalizeSchoolEvent(record, adapter, source, rawSnapshotId),
-        ),
+        tagSchoolEvent(normalizedItem),
       );
-      return repositories.items.upsert(item);
+      const savedItem = repositories.items.upsert(item);
+      const school = createSchoolFromEventRecord(record, savedItem);
+      const savedSchool = repositories.schools.upsert(school);
+      repositories.schoolEvents.upsert(
+        createSchoolEventFromItem(record, savedSchool.id, savedItem),
+      );
+      return savedItem;
     }
 
     default:
@@ -236,6 +246,44 @@ function tagSchoolEvent(item: Item): Item {
   return {
     ...item,
     tags: [...tags],
+  };
+}
+
+function createSchoolFromEventRecord(record: unknown, item: Item): School {
+  const raw = assertRecord(record, item.sourceId);
+  const schoolName = requireString(raw, "schoolName", item.sourceId);
+  const sourceUrl = getString(raw, "sourceUrl") ?? item.sourceUrl;
+
+  return {
+    id: `school_${stableHash(`${item.sourceId}|${schoolName}`)}`,
+    name: schoolName,
+    schoolType: getString(raw, "schoolType") ?? "secondary",
+    years: getString(raw, "years") ?? "9-13",
+    gender: getString(raw, "gender") ?? "co-ed",
+    authority: getString(raw, "authority") ?? "state",
+    hasZone: getBoolean(raw, "hasZone"),
+    website: sourceUrl,
+    area: item.area ?? "Greater Wellington",
+    commuteFromParaparaumu: getString(raw, "commuteFromParaparaumu"),
+    watchStatus: "new",
+  };
+}
+
+function createSchoolEventFromItem(
+  record: unknown,
+  schoolId: string,
+  item: Item,
+): SchoolEvent {
+  const raw = assertRecord(record, item.sourceId);
+
+  return {
+    id: `school_event_${stableHash(`${schoolId}|${item.id}`)}`,
+    schoolId,
+    itemId: item.id,
+    eventType: getString(raw, "eventType") ?? "school_event",
+    startsAt: item.startsAt,
+    deadline: getString(raw, "deadline"),
+    enrolmentYear: getNumber(raw, "enrolmentYear"),
   };
 }
 
@@ -350,6 +398,22 @@ function getStringArray(
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+function getBoolean(
+  record: Record<string, unknown>,
+  fieldName: string,
+): boolean | null {
+  const value = record[fieldName];
+  return typeof value === "boolean" ? value : null;
+}
+
+function getNumber(
+  record: Record<string, unknown>,
+  fieldName: string,
+): number | null {
+  const value = record[fieldName];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function assertRecord(

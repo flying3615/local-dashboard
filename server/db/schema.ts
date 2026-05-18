@@ -92,5 +92,49 @@ export function applySchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS item_links_target_idx
       ON item_links(to_entity_type, to_entity_id);
+
+    CREATE TABLE IF NOT EXISTS schools (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      school_type TEXT NOT NULL,
+      years TEXT NOT NULL,
+      gender TEXT NOT NULL,
+      authority TEXT NOT NULL,
+      has_zone INTEGER,
+      website TEXT NOT NULL,
+      area TEXT NOT NULL,
+      commute_from_paraparaumu TEXT,
+      watch_status TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS school_events (
+      id TEXT PRIMARY KEY,
+      school_id TEXT NOT NULL,
+      item_id TEXT NOT NULL UNIQUE,
+      event_type TEXT NOT NULL,
+      starts_at TEXT,
+      deadline TEXT,
+      enrolment_year INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+      FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS school_events_school_id_idx
+      ON school_events(school_id);
+
+    CREATE TABLE IF NOT EXISTS notes (
+      id TEXT PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS notes_entity_idx
+      ON notes(entity_type, entity_id);
   `);
 }

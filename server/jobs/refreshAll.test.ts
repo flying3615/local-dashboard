@@ -87,6 +87,19 @@ describe("refreshAll", () => {
         tags: expect.arrayContaining(["paraparaumu", "school"]),
       }),
     ]);
+    expect(repos.schools.list()).toEqual([
+      expect.objectContaining({
+        name: "Paraparaumu College",
+        area: "Paraparaumu",
+        watchStatus: "new",
+      }),
+    ]);
+    expect(repos.schoolEvents.list()).toEqual([
+      expect.objectContaining({
+        itemId: schoolItems[0]?.id,
+        eventType: "open_day",
+      }),
+    ]);
 
     expect(repos.itemLinks.listByItem(propertyItems[0]!.id)).toEqual([
       expect.objectContaining({

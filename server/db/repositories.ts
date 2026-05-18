@@ -2,16 +2,22 @@ import type {
   Item,
   ItemLink,
   ItemType,
+  Note,
   PropertyListing,
   RawSnapshot,
+  School,
+  SchoolEvent,
   Source,
   WatchStatus,
 } from "../domain/types";
 import {
   itemSchema,
   itemLinkSchema,
+  noteSchema,
   propertyListingSchema,
   rawSnapshotSchema,
+  schoolEventSchema,
+  schoolSchema,
   sourceSchema,
 } from "../domain/types";
 import type { AppDatabase } from "./database";
@@ -79,6 +85,38 @@ type ItemLinkRow = {
   to_entity_id: string;
   link_reason: string;
   confidence: number;
+};
+
+type SchoolRow = {
+  id: string;
+  name: string;
+  school_type: string;
+  years: string;
+  gender: string;
+  authority: string;
+  has_zone: number | null;
+  website: string;
+  area: string;
+  commute_from_paraparaumu: string | null;
+  watch_status: WatchStatus;
+};
+
+type SchoolEventRow = {
+  id: string;
+  school_id: string;
+  item_id: string;
+  event_type: string;
+  starts_at: string | null;
+  deadline: string | null;
+  enrolment_year: number | null;
+};
+
+type NoteRow = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  body: string;
+  created_at: string;
 };
 
 type ItemListFilters = {
@@ -394,6 +432,175 @@ export function createRepositories(db: AppDatabase) {
         return rows.map(mapItemLinkRow);
       },
     },
+
+    schools: {
+      upsert(school: School): School {
+        const parsed = schoolSchema.parse(school);
+
+        db.prepare(
+          `
+            INSERT INTO schools (
+              id,
+              name,
+              school_type,
+              years,
+              gender,
+              authority,
+              has_zone,
+              website,
+              area,
+              commute_from_paraparaumu,
+              watch_status
+            )
+            VALUES (
+              @id,
+              @name,
+              @schoolType,
+              @years,
+              @gender,
+              @authority,
+              @hasZone,
+              @website,
+              @area,
+              @commuteFromParaparaumu,
+              @watchStatus
+            )
+            ON CONFLICT(id) DO UPDATE SET
+              name = excluded.name,
+              school_type = excluded.school_type,
+              years = excluded.years,
+              gender = excluded.gender,
+              authority = excluded.authority,
+              has_zone = excluded.has_zone,
+              website = excluded.website,
+              area = excluded.area,
+              commute_from_paraparaumu = excluded.commute_from_paraparaumu,
+              watch_status = excluded.watch_status,
+              updated_at = CURRENT_TIMESTAMP
+          `,
+        ).run({
+          ...parsed,
+          hasZone: parsed.hasZone === null ? null : parsed.hasZone ? 1 : 0,
+        });
+
+        return parsed;
+      },
+
+      list(): School[] {
+        const rows = db
+          .prepare("SELECT * FROM schools ORDER BY name")
+          .all() as SchoolRow[];
+
+        return rows.map(mapSchoolRow);
+      },
+
+      get(id: string): School | null {
+        const row = db
+          .prepare("SELECT * FROM schools WHERE id = ?")
+          .get(id) as SchoolRow | undefined;
+
+        return row === undefined ? null : mapSchoolRow(row);
+      },
+    },
+
+    schoolEvents: {
+      upsert(event: SchoolEvent): SchoolEvent {
+        const parsed = schoolEventSchema.parse(event);
+
+        db.prepare(
+          `
+            INSERT INTO school_events (
+              id,
+              school_id,
+              item_id,
+              event_type,
+              starts_at,
+              deadline,
+              enrolment_year
+            )
+            VALUES (
+              @id,
+              @schoolId,
+              @itemId,
+              @eventType,
+              @startsAt,
+              @deadline,
+              @enrolmentYear
+            )
+            ON CONFLICT(item_id) DO UPDATE SET
+              id = excluded.id,
+              school_id = excluded.school_id,
+              event_type = excluded.event_type,
+              starts_at = excluded.starts_at,
+              deadline = excluded.deadline,
+              enrolment_year = excluded.enrolment_year,
+              updated_at = CURRENT_TIMESTAMP
+          `,
+        ).run(parsed);
+
+        return parsed;
+      },
+
+      listBySchool(schoolId: string): SchoolEvent[] {
+        const rows = db
+          .prepare(
+            "SELECT * FROM school_events WHERE school_id = ? ORDER BY id",
+          )
+          .all(schoolId) as SchoolEventRow[];
+
+        return rows.map(mapSchoolEventRow);
+      },
+
+      list(): SchoolEvent[] {
+        const rows = db
+          .prepare("SELECT * FROM school_events ORDER BY id")
+          .all() as SchoolEventRow[];
+
+        return rows.map(mapSchoolEventRow);
+      },
+    },
+
+    notes: {
+      upsert(note: Note): Note {
+        const parsed = noteSchema.parse(note);
+
+        db.prepare(
+          `
+            INSERT INTO notes (
+              id,
+              entity_type,
+              entity_id,
+              body,
+              created_at
+            )
+            VALUES (
+              @id,
+              @entityType,
+              @entityId,
+              @body,
+              @createdAt
+            )
+            ON CONFLICT(id) DO UPDATE SET
+              entity_type = excluded.entity_type,
+              entity_id = excluded.entity_id,
+              body = excluded.body,
+              created_at = excluded.created_at
+          `,
+        ).run(parsed);
+
+        return parsed;
+      },
+
+      listByEntity(entityType: string, entityId: string): Note[] {
+        const rows = db
+          .prepare(
+            "SELECT * FROM notes WHERE entity_type = ? AND entity_id = ? ORDER BY created_at DESC",
+          )
+          .all(entityType, entityId) as NoteRow[];
+
+        return rows.map(mapNoteRow);
+      },
+    },
   };
 }
 
@@ -469,6 +676,44 @@ function mapItemLinkRow(row: ItemLinkRow): ItemLink {
     toEntityId: row.to_entity_id,
     linkReason: row.link_reason,
     confidence: row.confidence,
+  });
+}
+
+function mapSchoolRow(row: SchoolRow): School {
+  return schoolSchema.parse({
+    id: row.id,
+    name: row.name,
+    schoolType: row.school_type,
+    years: row.years,
+    gender: row.gender,
+    authority: row.authority,
+    hasZone: row.has_zone === null ? null : row.has_zone === 1,
+    website: row.website,
+    area: row.area,
+    commuteFromParaparaumu: row.commute_from_paraparaumu,
+    watchStatus: row.watch_status,
+  });
+}
+
+function mapSchoolEventRow(row: SchoolEventRow): SchoolEvent {
+  return schoolEventSchema.parse({
+    id: row.id,
+    schoolId: row.school_id,
+    itemId: row.item_id,
+    eventType: row.event_type,
+    startsAt: row.starts_at,
+    deadline: row.deadline,
+    enrolmentYear: row.enrolment_year,
+  });
+}
+
+function mapNoteRow(row: NoteRow): Note {
+  return noteSchema.parse({
+    id: row.id,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    body: row.body,
+    createdAt: row.created_at,
   });
 }
 

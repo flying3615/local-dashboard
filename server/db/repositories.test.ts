@@ -328,4 +328,135 @@ describe("repositories", () => {
       }),
     ]);
   });
+
+  it("stores and lists schools", () => {
+    const repos = createTestRepositories();
+
+    repos.schools.upsert({
+      id: "school_1",
+      name: "Paraparaumu College",
+      schoolType: "Secondary",
+      years: "9-13",
+      gender: "Co-educational",
+      authority: "State",
+      hasZone: true,
+      website: "https://paraparaumucollege.school.nz",
+      area: "Paraparaumu",
+      commuteFromParaparaumu: "5 minutes",
+      watchStatus: "watching",
+    });
+
+    repos.schools.upsert({
+      id: "school_2",
+      name: "Wellington College",
+      schoolType: "Secondary",
+      years: "9-13",
+      gender: "Boys",
+      authority: "State",
+      hasZone: true,
+      website: "https://wellington-college.school.nz",
+      area: "Wellington",
+      commuteFromParaparaumu: "50 minutes by train",
+      watchStatus: "new",
+    });
+
+    expect(repos.schools.list()).toHaveLength(2);
+    expect(repos.schools.get("school_1")).toMatchObject({
+      name: "Paraparaumu College",
+      area: "Paraparaumu",
+      watchStatus: "watching",
+    });
+  });
+
+  it("stores and lists school events by school", () => {
+    const repos = createTestRepositories();
+
+    repos.sources.upsert({
+      id: "source_1",
+      name: "Test Source",
+      type: "school_directory",
+      url: "https://example.com",
+      trustLevel: "official",
+      enabled: true,
+      refreshIntervalMinutes: 1440,
+      lastSuccessAt: null,
+      lastError: null,
+    });
+
+    repos.schools.upsert({
+      id: "school_1",
+      name: "Paraparaumu College",
+      schoolType: "Secondary",
+      years: "9-13",
+      gender: "Co-educational",
+      authority: "State",
+      hasZone: true,
+      website: "https://paraparaumucollege.school.nz",
+      area: "Paraparaumu",
+      commuteFromParaparaumu: "5 minutes",
+      watchStatus: "watching",
+    });
+
+    repos.items.upsert({
+      id: "item_1",
+      type: "school_event",
+      title: "Open Day",
+      summary: "Paraparaumu College open day",
+      sourceId: "source_1",
+      sourceUrl: "https://example.com/open-day",
+      area: "Paraparaumu",
+      address: null,
+      publishedAt: null,
+      startsAt: "2026-06-15T00:00:00.000Z",
+      endsAt: null,
+      status: "new",
+      tags: ["school", "paraparaumu"],
+      rawSnapshotId: null,
+    });
+
+    repos.schoolEvents.upsert({
+      id: "event_1",
+      schoolId: "school_1",
+      itemId: "item_1",
+      eventType: "open_day",
+      startsAt: "2026-06-15T00:00:00.000Z",
+      deadline: "2026-06-10T00:00:00.000Z",
+      enrolmentYear: 2027,
+    });
+
+    expect(repos.schoolEvents.list()).toHaveLength(1);
+    expect(repos.schoolEvents.listBySchool("school_1")).toEqual([
+      expect.objectContaining({
+        schoolId: "school_1",
+        eventType: "open_day",
+        enrolmentYear: 2027,
+      }),
+    ]);
+  });
+
+  it("stores and lists notes by entity", () => {
+    const repos = createTestRepositories();
+
+    repos.notes.upsert({
+      id: "note_1",
+      entityType: "property",
+      entityId: "property_1",
+      body: "Worth a closer look — bus stop nearby",
+      createdAt: "2026-05-17T00:00:00.000Z",
+    });
+
+    repos.notes.upsert({
+      id: "note_2",
+      entityType: "property",
+      entityId: "property_1",
+      body: "Checked the council GIS — no flood risk",
+      createdAt: "2026-05-17T01:00:00.000Z",
+    });
+
+    expect(repos.notes.listByEntity("property", "property_1")).toHaveLength(2);
+    expect(repos.notes.listByEntity("property", "property_1")[0]).toMatchObject({
+      body: "Checked the council GIS — no flood risk",
+    });
+    expect(repos.notes.listByEntity("school", "school_1")).toHaveLength(0);
+  });
 });
