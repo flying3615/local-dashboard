@@ -2,10 +2,15 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 
 import { StatusBadge } from "../components/StatusBadge";
-import type { KapitiPropertyRecord, PropertyWithItem } from "../lib/api";
+import type {
+  KapitiPropertyRecord,
+  PropertySearchLink,
+  PropertyWithItem,
+} from "../lib/api";
 
 interface PropertyListProps {
   properties: PropertyWithItem[];
+  searchLinks?: PropertySearchLink[];
   officialRecords?: KapitiPropertyRecord[];
   onSearchOfficialRecords?: (query: string) => Promise<void> | void;
   onSelectProperty?: (id: string) => void;
@@ -13,6 +18,7 @@ interface PropertyListProps {
 
 export function PropertyList({
   properties,
+  searchLinks = [],
   officialRecords = [],
   onSearchOfficialRecords,
   onSelectProperty,
@@ -42,6 +48,27 @@ export function PropertyList({
 
   return (
     <div className="property-list" data-testid="property-list">
+      {searchLinks.length > 0 && (
+        <section className="external-searches">
+          <h2 className="section-title">Listing Searches</h2>
+          <div className="search-link-list">
+            {searchLinks.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="search-link-card"
+                aria-label={link.label}
+              >
+                <span className="search-link-provider">{link.provider}</span>
+                <span className="search-link-label">{link.label}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       <form className="official-lookup" onSubmit={handleSearch}>
         <label htmlFor="official-property-query">Official property lookup</label>
         <div className="lookup-controls">

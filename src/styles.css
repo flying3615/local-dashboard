@@ -245,6 +245,42 @@
 }
 
 /* ---- Property List ---- */
+.external-searches {
+  margin-bottom: 16px;
+}
+
+.search-link-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.search-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+  color: var(--color-text);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.search-link-card:hover {
+  border-color: var(--color-accent);
+}
+
+.search-link-provider {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.search-link-label {
+  font-weight: 600;
+}
+
 .official-lookup {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

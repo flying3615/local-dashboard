@@ -7,6 +7,7 @@ import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
 import { searchKapitiPropertyRecords } from "../adapters/kapitiPropertyRecords";
 import type { KapitiPropertyRecord } from "../adapters/kapitiPropertyRecords";
+import { configuredPropertySearchLinks } from "../adapters/propertySearchLinks";
 import type { createRepositories } from "../db/repositories";
 import { refreshAll } from "../jobs/refreshAll";
 
@@ -100,6 +101,10 @@ export function createApiRoutes(
     const notes = repositories.notes.listByEntity("property", id);
 
     res.json({ item, property: property ?? null, source, links, notes });
+  });
+
+  router.get("/property-search-links", (_req: Request, res: Response) => {
+    res.json(configuredPropertySearchLinks());
   });
 
   router.get("/property-records/search", async (req: Request, res: Response) => {

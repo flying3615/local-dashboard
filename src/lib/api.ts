@@ -30,6 +30,16 @@ export interface PropertyWithItem {
   source: Source | null;
 }
 
+export interface PropertySearchLink {
+  id: string;
+  provider: string;
+  label: string;
+  url: string;
+  area: string;
+  category: "residential_sale";
+  notes: string;
+}
+
 export interface PropertyDetail {
   item: Item;
   property: PropertyListing | null;
@@ -73,6 +83,10 @@ export function getDashboard(): Promise<DashboardResponse> {
 
 export function getProperties(): Promise<PropertyWithItem[]> {
   return request<PropertyWithItem[]>("/properties");
+}
+
+export function getPropertySearchLinks(): Promise<PropertySearchLink[]> {
+  return request<PropertySearchLink[]>("/property-search-links");
 }
 
 export function getProperty(id: string): Promise<PropertyDetail> {

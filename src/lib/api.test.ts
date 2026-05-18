@@ -6,6 +6,7 @@ import {
   getProperty,
   getSchools,
   getSources,
+  getPropertySearchLinks,
   refreshSource,
   searchPropertyRecords,
 } from "./api";
@@ -67,6 +68,24 @@ describe("API client", () => {
     const result = await getProperties();
     expect(result).toHaveLength(1);
     expect(result[0].item.title).toBe("12 Example Street");
+  });
+
+  it("getPropertySearchLinks fetches external property search links", async () => {
+    const links = [
+      {
+        id: "realestate_paraparaumu_residential_sale",
+        provider: "realestate.co.nz",
+        label: "Paraparaumu homes for sale",
+        url: "https://www.realestate.co.nz/residential/sale/wellington/kapiti-coast/paraparaumu",
+        area: "Paraparaumu",
+        category: "residential_sale",
+        notes: "External search link only.",
+      },
+    ];
+    mockFetch(links);
+
+    const result = await getPropertySearchLinks();
+    expect(result).toEqual(links);
   });
 
   it("getProperty fetches a single property by id", async () => {

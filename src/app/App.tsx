@@ -4,12 +4,14 @@ import type {
   DashboardResponse,
   KapitiPropertyRecord,
   PropertyDetail as PropertyDetailType,
+  PropertySearchLink,
   PropertyWithItem,
   SchoolWithEvents,
 } from "../lib/api";
 import {
   getDashboard,
   getProperties,
+  getPropertySearchLinks,
   getProperty,
   getSchools,
   getSources,
@@ -29,6 +31,7 @@ export function App() {
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [properties, setProperties] = useState<PropertyWithItem[]>([]);
+  const [propertySearchLinks, setPropertySearchLinks] = useState<PropertySearchLink[]>([]);
   const [officialPropertyRecords, setOfficialPropertyRecords] = useState<KapitiPropertyRecord[]>([]);
   const [schools, setSchools] = useState<SchoolWithEvents[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
@@ -55,8 +58,12 @@ export function App() {
 
   const loadProperties = useCallback(async () => {
     try {
-      const props = await getProperties();
+      const [props, links] = await Promise.all([
+        getProperties(),
+        getPropertySearchLinks(),
+      ]);
       setProperties(props);
+      setPropertySearchLinks(links);
     } catch {
       // keep stale data if fetch fails
     }
@@ -150,6 +157,7 @@ export function App() {
         {!loading && !error && activeTab === "properties" && !selectedPropertyId && (
           <PropertyList
             properties={properties}
+            searchLinks={propertySearchLinks}
             officialRecords={officialPropertyRecords}
             onSearchOfficialRecords={handleSearchOfficialRecords}
             onSelectProperty={loadPropertyDetail}

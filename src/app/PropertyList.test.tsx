@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { PropertyList } from "./PropertyList";
-import type { KapitiPropertyRecord } from "../lib/api";
+import type { KapitiPropertyRecord, PropertySearchLink } from "../lib/api";
 
 function makeProperty(overrides = {}) {
   return {
@@ -83,6 +83,31 @@ describe("PropertyList", () => {
 
     await user.click(screen.getByText("12 Example Street, Paraparaumu"));
     expect(onSelect).toHaveBeenCalledWith("item_1");
+  });
+
+  it("renders realestate external search links", () => {
+    const searchLinks: PropertySearchLink[] = [
+      {
+        id: "realestate_paraparaumu_residential_sale",
+        provider: "realestate.co.nz",
+        label: "Paraparaumu homes for sale",
+        url: "https://www.realestate.co.nz/residential/sale/wellington/kapiti-coast/paraparaumu",
+        area: "Paraparaumu",
+        category: "residential_sale",
+        notes: "External search link only.",
+      },
+    ];
+
+    render(<PropertyList properties={[]} searchLinks={searchLinks} />);
+
+    const link = screen.getByRole("link", {
+      name: "Paraparaumu homes for sale",
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://www.realestate.co.nz/residential/sale/wellington/kapiti-coast/paraparaumu",
+    );
+    expect(screen.getByText("realestate.co.nz")).toBeInTheDocument();
   });
 
   it("searches and renders official KCDC property records", async () => {

@@ -151,6 +151,24 @@ describe("API routes", () => {
     expect(body).toHaveProperty("error");
   });
 
+  it("GET /api/property-search-links returns realestate external search links", async () => {
+    const res = await fetch(`${url}/api/property-search-links`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "realestate_paraparaumu_residential_sale",
+          provider: "realestate.co.nz",
+          url: expect.stringContaining(
+            "/residential/sale/wellington/kapiti-coast/paraparaumu",
+          ),
+        }),
+      ]),
+    );
+  });
+
   it("GET /api/property-records/search returns official KCDC property records", async () => {
     const res = await fetch(`${url}/api/property-records/search?q=Otaihanga`);
     expect(res.status).toBe(200);
