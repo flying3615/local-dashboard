@@ -1,0 +1,50 @@
+import { describe, expect, it } from "vitest";
+
+import { allConfiguredAdapters, activeAdapters, mockAdapters } from "./sourceConfig";
+
+describe("sourceConfig", () => {
+  it("includes Trade Me, realestate.co.nz, Education Counts, and Kapiti Council", () => {
+    const configured = allConfiguredAdapters();
+
+    expect(configured).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          adapter: expect.objectContaining({
+            sourceId: "trademe_property",
+          }),
+          status: "not_implemented",
+        }),
+        expect.objectContaining({
+          adapter: expect.objectContaining({
+            sourceId: "realestate_co_nz",
+          }),
+          status: "not_implemented",
+        }),
+        expect.objectContaining({
+          adapter: expect.objectContaining({
+            sourceId: "education_counts",
+          }),
+          status: "not_implemented",
+        }),
+        expect.objectContaining({
+          adapter: expect.objectContaining({
+            sourceId: "kapiti_council",
+          }),
+          status: "not_implemented",
+        }),
+      ]),
+    );
+  });
+
+  it("returns no active adapters when all are not_implemented", () => {
+    const active = activeAdapters();
+    expect(active).toHaveLength(0);
+  });
+
+  it("returns mock adapters for seed data", () => {
+    const mocks = mockAdapters();
+    expect(mocks).toHaveLength(2);
+    expect(mocks[0]?.sourceId).toBe("mock_properties");
+    expect(mocks[1]?.sourceId).toBe("mock_schools");
+  });
+});
