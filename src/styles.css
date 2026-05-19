@@ -360,6 +360,24 @@
   color: var(--color-text-muted);
 }
 
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortable-header:hover {
+  background: #f0f0f0;
+}
+
+.sort-active {
+  color: var(--color-accent);
+}
+
+.sort-arrow {
+  font-size: 0.625rem;
+}
+
 .property-row-clickable {
   cursor: pointer;
 }

@@ -8,6 +8,7 @@ coverage/
 
 data/*.db
 data/*.db-*
+data/*-cache.json*
 *.sqlite
 *.sqlite3
 

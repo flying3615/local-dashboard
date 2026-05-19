@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { StatusBadge } from "../components/StatusBadge";
@@ -7,6 +7,87 @@ import type {
   PropertySearchLink,
   PropertyWithItem,
 } from "../lib/api";
+
+type SortColumn = "address" | "price" | "beds" | "baths" | "openHome" | "platform" | "status";
+type SortDir = "asc" | "desc";
+
+function sortProperties(list: PropertyWithItem[], col: SortColumn, dir: SortDir): PropertyWithItem[] {
+  return [...list].sort((a, b) => {
+    const pA = a.property;
+    const pB = b.property;
+    let va: string | number = "";
+    let vb: string | number = "";
+
+    switch (col) {
+      case "openHome": {
+        va = pA?.openHomeTimes?.[0] ? Date.parse(pA.openHomeTimes[0]) : 0;
+        vb = pB?.openHomeTimes?.[0] ? Date.parse(pB.openHomeTimes[0]) : 0;
+        break;
+      }
+      case "price": {
+        va = pA?.price ?? "";
+        vb = pB?.price ?? "";
+        break;
+      }
+      case "beds": {
+        va = pA?.bedrooms ?? -1;
+        vb = pB?.bedrooms ?? -1;
+        break;
+      }
+      case "baths": {
+        va = pA?.bathrooms ?? -1;
+        vb = pB?.bathrooms ?? -1;
+        break;
+      }
+      case "address": {
+        va = a.item.address ?? pA?.address ?? "";
+        vb = b.item.address ?? pB?.address ?? "";
+        break;
+      }
+      case "platform": {
+        va = pA?.platform ?? "";
+        vb = pB?.platform ?? "";
+        break;
+      }
+      case "status": {
+        va = pA?.watchStatus ?? "";
+        vb = pB?.watchStatus ?? "";
+        break;
+      }
+    }
+
+    if (va < vb) return dir === "asc" ? -1 : 1;
+    if (va > vb) return dir === "asc" ? 1 : -1;
+    return 0;
+  });
+}
+
+function SortHeader({
+  column,
+  label,
+  current,
+  dir,
+  onSort,
+}: {
+  column: SortColumn;
+  label: string;
+  current: SortColumn;
+  dir: SortDir;
+  onSort: (col: SortColumn) => void;
+}) {
+  const active = column === current;
+  return (
+    <th
+      className={`sortable-header ${active ? "sort-active" : ""}`}
+      onClick={() => onSort(column)}
+    >
+      {label}
+      <span className="sort-arrow">
+        {active ? (dir === "asc" ? " ↑" : " ↓") : ""}
+      </span>
+    </th>
+  );
+}
 
 interface PropertyListProps {
   properties: PropertyWithItem[];
@@ -26,6 +107,22 @@ export function PropertyList({
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [sortCol, setSortCol] = useState<SortColumn>("openHome");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const sortedProperties = useMemo(
+    () => sortProperties(properties, sortCol, sortDir),
+    [properties, sortCol, sortDir],
+  );
+
+  const handleSort = (col: SortColumn) => {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  };
 
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault();
@@ -130,17 +227,17 @@ export function PropertyList({
         <table className="property-table">
           <thead>
             <tr>
-              <th>Address</th>
-              <th>Price</th>
-              <th>Beds</th>
-              <th>Baths</th>
-              <th>Open Home</th>
-              <th>Platform</th>
-              <th>Status</th>
+              <SortHeader column="address" label="Address" current={sortCol} dir={sortDir} onSort={handleSort} />
+              <SortHeader column="price" label="Price" current={sortCol} dir={sortDir} onSort={handleSort} />
+              <SortHeader column="beds" label="Beds" current={sortCol} dir={sortDir} onSort={handleSort} />
+              <SortHeader column="baths" label="Baths" current={sortCol} dir={sortDir} onSort={handleSort} />
+              <SortHeader column="openHome" label="Open Home" current={sortCol} dir={sortDir} onSort={handleSort} />
+              <SortHeader column="platform" label="Platform" current={sortCol} dir={sortDir} onSort={handleSort} />
+              <SortHeader column="status" label="Status" current={sortCol} dir={sortDir} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
-            {properties.map(({ item, property }) => (
+            {sortedProperties.map(({ item, property }) => (
               <tr
                 key={item.id}
                 className={`property-row ${onSelectProperty ? "property-row-clickable" : ""}`}

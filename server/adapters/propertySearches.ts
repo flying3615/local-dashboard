@@ -18,20 +18,3 @@ export function createTradeMeAdapter(): SourceAdapter {
   };
 }
 
-export function createRealestateAdapter(): SourceAdapter {
-  return {
-    sourceId: "realestate_co_nz",
-    recordType: "property_listing",
-    source: {
-      name: "realestate.co.nz",
-      type: "property_platform",
-      url: "https://www.realestate.co.nz/",
-      trustLevel: "platform",
-      enabled: false,
-      refreshIntervalMinutes: 720,
-    },
-    async fetch() {
-      return [];
-    },
-  };
-}

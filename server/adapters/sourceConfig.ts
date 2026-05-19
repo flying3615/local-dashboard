@@ -1,10 +1,8 @@
 import type { SourceAdapter } from "./types";
 import { createEducationCountsAdapter } from "./educationCounts";
 import { createKapitiCouncilAdapter } from "./kapitiCouncil";
-import {
-  createRealestateAdapter,
-  createTradeMeAdapter,
-} from "./propertySearches";
+import { createTradeMeAdapter } from "./propertySearches";
+import { createRealestateAdapter } from "./realestate";
 import { createMockPropertyAdapter } from "./mockProperties";
 import { createMockSchoolAdapter } from "./mockSchools";
 
@@ -18,9 +16,9 @@ export interface ConfiguredAdapter {
 export function allConfiguredAdapters(): ConfiguredAdapter[] {
   return [
     { adapter: createTradeMeAdapter(), status: "not_implemented" },
-    { adapter: createRealestateAdapter(), status: "not_implemented" },
-      { adapter: createEducationCountsAdapter(), status: "active" },
-      { adapter: createKapitiCouncilAdapter(), status: "active" },
+    { adapter: createRealestateAdapter(), status: "active" },
+    { adapter: createEducationCountsAdapter(), status: "active" },
+    { adapter: createKapitiCouncilAdapter(), status: "active" },
   ];
 }
 

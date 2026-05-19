@@ -7,9 +7,10 @@ import { shouldSeedMockData, runtimeAdapters, registerAdapterSources } from "./s
 describe("startup", () => {
   it("does not include mock adapters by default", () => {
     expect(shouldSeedMockData({})).toBe(false);
-    expect(runtimeAdapters({}).map((adapter) => adapter.sourceId)).toEqual([
+    expect(runtimeAdapters({}).map((adapter) => adapter.sourceId).sort()).toEqual([
       "education_counts",
       "kapiti_council",
+      "realestate_co_nz",
     ]);
   });
 
@@ -22,6 +23,7 @@ describe("startup", () => {
     ).toEqual([
       "mock_properties",
       "mock_schools",
+      "realestate_co_nz",
       "education_counts",
       "kapiti_council",
     ]);

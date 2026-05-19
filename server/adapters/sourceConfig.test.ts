@@ -18,7 +18,7 @@ describe("sourceConfig", () => {
           adapter: expect.objectContaining({
             sourceId: "realestate_co_nz",
           }),
-          status: "not_implemented",
+          status: "active",
         }),
         expect.objectContaining({
           adapter: expect.objectContaining({
@@ -38,9 +38,10 @@ describe("sourceConfig", () => {
 
   it("returns implemented official adapters as active adapters", () => {
     const active = activeAdapters();
-    expect(active.map((adapter) => adapter.sourceId)).toEqual([
+    expect(active.map((adapter) => adapter.sourceId).sort()).toEqual([
       "education_counts",
       "kapiti_council",
+      "realestate_co_nz",
     ]);
   });
 
