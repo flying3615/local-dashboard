@@ -41,6 +41,7 @@ Key fields available in the SSR payload:
 | `display_estimated_rental_lower_value_short` | `estimatedRentalLow` | Weekly rent, parse "450" → 450 |
 | `display_estimated_rental_upper_value_short` | `estimatedRentalHigh` | Weekly rent |
 | `estimated_rental_yield` | `estimatedRentalYield` | e.g. "4.0%" (string) |
+| `hero_cover_image_url` | `imageUrl` | Large property photo |
 
 ## Data Model Changes
 
@@ -68,6 +69,7 @@ buildingConstruction: z.string().nullable(),
 ownershipType: z.string().nullable(),
 legalDescription: z.string().nullable(),
 certificateOfTitle: z.string().nullable(),
+imageUrl: z.string().url().nullable(),
 ```
 
 All default to `null` — existing adapters and data are unaffected.
@@ -126,6 +128,19 @@ Source metadata:
 | `server/adapters/sourceConfig.ts` | Register `createHomesNzAdapter` |
 
 ## Out of Scope (future)
+
+## Frontend Changes
+
+- Add `imageUrl` to `src/lib/types.ts` `PropertyListing` interface
+- Display `imageUrl` as a hero image at the top of `PropertyDetail.tsx` when present
+- The original source link is already shown via `SourceLink` using `item.sourceUrl` (which will be the homes.co.nz property page URL)
+
+## Out of Scope (future)
+
+- Individual recent sales records (require API/headless browser)
+- Nearby listings (require API call)
+- Property images from other adapters (only homes.co.nz provides them currently)
+- School zone assignment data
 
 - Individual recent sales records (require API/headless browser)
 - Nearby listings (require API call)
