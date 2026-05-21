@@ -89,6 +89,26 @@ export const propertyListingSchema = z.object({
   platform: z.string().min(1),
   watchStatus: watchStatusSchema,
   notes: z.string().nullable(),
+  // Valuation
+  estimatedValueLow: z.number().int().nonnegative().nullable(),
+  estimatedValueHigh: z.number().int().nonnegative().nullable(),
+  estimatedValueDate: z.string().nullable(),
+  capitalValue: z.number().int().nonnegative().nullable(),
+  landValue: z.number().int().nonnegative().nullable(),
+  improvementValue: z.number().int().nonnegative().nullable(),
+  cvDate: z.string().nullable(),
+  // Rental estimate
+  estimatedRentalLow: z.number().int().nonnegative().nullable(),
+  estimatedRentalHigh: z.number().int().nonnegative().nullable(),
+  estimatedRentalYield: z.string().nullable(),
+  // Council / property attributes
+  decadeBuilt: z.string().nullable(),
+  contour: z.string().nullable(),
+  buildingConstruction: z.string().nullable(),
+  ownershipType: z.string().nullable(),
+  legalDescription: z.string().nullable(),
+  certificateOfTitle: z.string().nullable(),
+  imageUrl: z.string().url().nullable(),
 });
 
 export const schoolSchema = z.object({

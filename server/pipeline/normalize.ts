@@ -19,6 +19,23 @@ export interface RawPropertyListing {
   listedAt?: string | null;
   openHomeTimes?: string[];
   rawSnapshotId?: string | null;
+  estimatedValueLow?: number | null;
+  estimatedValueHigh?: number | null;
+  estimatedValueDate?: string | null;
+  capitalValue?: number | null;
+  landValue?: number | null;
+  improvementValue?: number | null;
+  cvDate?: string | null;
+  estimatedRentalLow?: number | null;
+  estimatedRentalHigh?: number | null;
+  estimatedRentalYield?: string | null;
+  decadeBuilt?: string | null;
+  contour?: string | null;
+  buildingConstruction?: string | null;
+  ownershipType?: string | null;
+  legalDescription?: string | null;
+  certificateOfTitle?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface NormalizeContext {
@@ -79,6 +96,23 @@ export function normalizePropertyListing(
       platform: raw.platform,
       watchStatus: "new",
       notes: null,
+      estimatedValueLow: raw.estimatedValueLow ?? null,
+      estimatedValueHigh: raw.estimatedValueHigh ?? null,
+      estimatedValueDate: raw.estimatedValueDate ?? null,
+      capitalValue: raw.capitalValue ?? null,
+      landValue: raw.landValue ?? null,
+      improvementValue: raw.improvementValue ?? null,
+      cvDate: raw.cvDate ?? null,
+      estimatedRentalLow: raw.estimatedRentalLow ?? null,
+      estimatedRentalHigh: raw.estimatedRentalHigh ?? null,
+      estimatedRentalYield: raw.estimatedRentalYield ?? null,
+      decadeBuilt: raw.decadeBuilt ?? null,
+      contour: raw.contour ?? null,
+      buildingConstruction: raw.buildingConstruction ?? null,
+      ownershipType: raw.ownershipType ?? null,
+      legalDescription: raw.legalDescription ?? null,
+      certificateOfTitle: raw.certificateOfTitle ?? null,
+      imageUrl: raw.imageUrl ?? null,
     },
   };
 }
