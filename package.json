@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
-    "build": "npm run typecheck && vite build"
+    "build": "npm run typecheck && vite build",
+    "d1:seed:export": "tsx scripts/export-d1-seed.ts",
+    "cf:check": "wrangler deploy --dry-run",
+    "cf:deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
@@ -25,6 +28,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260521.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -39,6 +43,7 @@
     "tsx": "^4.22.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.13",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.6",
+    "wrangler": "^4.93.0"
   }
 }
