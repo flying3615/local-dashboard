@@ -212,7 +212,7 @@ describe("homesNz adapter", () => {
 
   it("skips properties already in cache", async () => {
     const propertyCache = memoryPropertyCache({
-      fetchedAt: "2026-05-01T00:00:00.000Z",
+      fetchedAt: "2026-05-22T10:00:00.000Z",
       revisions: { eBB0X: "2026-05-01" },
     });
 
@@ -254,7 +254,7 @@ describe("homesNz adapter", () => {
 
   it("returns empty when all properties are cached", async () => {
     const propertyCache = memoryPropertyCache({
-      fetchedAt: "2026-05-01T00:00:00.000Z",
+      fetchedAt: "2026-05-22T10:00:00.000Z",
       revisions: {
         eBB0X: "2026-05-01",
         WAw7b: "2026-04-15",

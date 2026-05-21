@@ -84,7 +84,7 @@ export function createHomesNzAdapter(
         now(),
       );
       const cache = await propertyCacheStore.read();
-      const changed = findChanged(allProperties, cache);
+      const changed = findChanged(allProperties, cache, now());
       const pending = changed.slice(0, maxPropertiesPerFetch);
 
       if (pending.length === 0) return [];
@@ -100,9 +100,9 @@ export function createHomesNzAdapter(
           const result = await fetchPropertyPage(fetchImpl, prop);
           if (result) {
             results.push(result);
-            if (result.estimatedValueDate) {
-              newRevisions[prop.id] = result.estimatedValueDate;
-            }
+            // Store revision date if available, otherwise use fetchedAt so the
+            // property is cached and not re-fetched on every refresh.
+            newRevisions[prop.id] = result.estimatedValueDate ?? fetchedAt;
           }
         } catch {
           // Keep failed properties out of cache so next refresh retries
@@ -171,10 +171,19 @@ async function discoverParaparaumuProperties(
 function findChanged(
   properties: PropertyUrl[],
   cache: PropertyCache | null,
+  now: string,
 ): PropertyUrl[] {
   if (!cache) return properties;
-  const cached = cache.revisions;
-  return properties.filter((p) => !(p.id in cached));
+
+  // Skip properties fetched within the last 24 hours
+  const cacheAge = Date.parse(now) - Date.parse(cache.fetchedAt);
+  if (cacheAge < 24 * 60 * 60 * 1000) {
+    const cached = cache.revisions;
+    return properties.filter((p) => !(p.id in cached));
+  }
+
+  // Cache expired — re-check all
+  return properties;
 }
 
 async function fetchPropertyPage(
