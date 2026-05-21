@@ -74,6 +74,23 @@ export interface PropertyListing {
   platform: string;
   watchStatus: WatchStatus;
   notes: string | null;
+  estimatedValueLow: number | null;
+  estimatedValueHigh: number | null;
+  estimatedValueDate: string | null;
+  capitalValue: number | null;
+  landValue: number | null;
+  improvementValue: number | null;
+  cvDate: string | null;
+  estimatedRentalLow: number | null;
+  estimatedRentalHigh: number | null;
+  estimatedRentalYield: string | null;
+  decadeBuilt: string | null;
+  contour: string | null;
+  buildingConstruction: string | null;
+  ownershipType: string | null;
+  legalDescription: string | null;
+  certificateOfTitle: string | null;
+  imageUrl: string | null;
 }
 
 export interface School {

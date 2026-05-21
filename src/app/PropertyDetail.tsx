@@ -30,6 +30,17 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
         </div>
       </header>
 
+      {property?.imageUrl && (
+        <section className="detail-hero">
+          <img
+            src={property.imageUrl}
+            alt={item.title}
+            className="property-hero-image"
+            style={{ maxWidth: "100%", borderRadius: "8px" }}
+          />
+        </section>
+      )}
+
       <section className="detail-fields">
         <dl>
           {item.address && (
@@ -102,6 +113,80 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
             <>
               <dt>Watch Status</dt>
               <dd><StatusBadge status={property.watchStatus} /></dd>
+            </>
+          )}
+          {property?.estimatedValueLow != null && (
+            <>
+              <dt>HomesEstimate</dt>
+              <dd>
+                ${property.estimatedValueLow.toLocaleString()} – $
+                {property.estimatedValueHigh?.toLocaleString()}
+                {property.estimatedValueDate && (
+                  <> (as of {new Date(property.estimatedValueDate).toLocaleDateString()})</>
+                )}
+              </dd>
+            </>
+          )}
+          {property?.capitalValue != null && (
+            <>
+              <dt>CV</dt>
+              <dd>
+                ${property.capitalValue.toLocaleString()}
+                {property.cvDate && (
+                  <> (as of {new Date(property.cvDate).toLocaleDateString()})</>
+                )}
+              </dd>
+            </>
+          )}
+          {property?.landValue != null && (
+            <>
+              <dt>Land Value</dt>
+              <dd>${property.landValue.toLocaleString()}</dd>
+            </>
+          )}
+          {property?.improvementValue != null && (
+            <>
+              <dt>Improvement Value</dt>
+              <dd>${property.improvementValue.toLocaleString()}</dd>
+            </>
+          )}
+          {property?.estimatedRentalLow != null && (
+            <>
+              <dt>Rental Estimate</dt>
+              <dd>
+                ${property.estimatedRentalLow} – ${property.estimatedRentalHigh}/wk
+                {property.estimatedRentalYield && <> ({property.estimatedRentalYield} yield)</>}
+              </dd>
+            </>
+          )}
+          {property?.decadeBuilt && (
+            <>
+              <dt>Decade Built</dt>
+              <dd>{property.decadeBuilt}s</dd>
+            </>
+          )}
+          {property?.contour && (
+            <>
+              <dt>Contour</dt>
+              <dd>{property.contour}</dd>
+            </>
+          )}
+          {property?.ownershipType && (
+            <>
+              <dt>Ownership</dt>
+              <dd>{property.ownershipType}</dd>
+            </>
+          )}
+          {property?.legalDescription && (
+            <>
+              <dt>Legal Description</dt>
+              <dd>{property.legalDescription}</dd>
+            </>
+          )}
+          {property?.certificateOfTitle && (
+            <>
+              <dt>Title</dt>
+              <dd>{property.certificateOfTitle}</dd>
             </>
           )}
         </dl>

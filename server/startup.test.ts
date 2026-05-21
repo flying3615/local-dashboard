@@ -9,6 +9,7 @@ describe("startup", () => {
     expect(shouldSeedMockData({})).toBe(false);
     expect(runtimeAdapters({}).map((adapter) => adapter.sourceId).sort()).toEqual([
       "education_counts",
+      "homes_co_nz",
       "kapiti_council",
       "realestate_co_nz",
     ]);
@@ -23,6 +24,7 @@ describe("startup", () => {
     ).toEqual([
       "mock_properties",
       "mock_schools",
+      "homes_co_nz",
       "realestate_co_nz",
       "education_counts",
       "kapiti_council",
