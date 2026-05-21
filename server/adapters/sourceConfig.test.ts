@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { allConfiguredAdapters, activeAdapters, mockAdapters } from "./sourceConfig";
 
 describe("sourceConfig", () => {
-  it("includes Trade Me, realestate.co.nz, Education Counts, and Kapiti Council", () => {
+  it("includes Trade Me, realestate.co.nz, homes.co.nz, Education Counts, and Kapiti Council", () => {
     const configured = allConfiguredAdapters();
 
     expect(configured).toEqual(
@@ -13,6 +13,12 @@ describe("sourceConfig", () => {
             sourceId: "trademe_property",
           }),
           status: "not_implemented",
+        }),
+        expect.objectContaining({
+          adapter: expect.objectContaining({
+            sourceId: "homes_co_nz",
+          }),
+          status: "active",
         }),
         expect.objectContaining({
           adapter: expect.objectContaining({
@@ -40,6 +46,7 @@ describe("sourceConfig", () => {
     const active = activeAdapters();
     expect(active.map((adapter) => adapter.sourceId).sort()).toEqual([
       "education_counts",
+      "homes_co_nz",
       "kapiti_council",
       "realestate_co_nz",
     ]);

@@ -3,6 +3,7 @@ import { createEducationCountsAdapter } from "./educationCounts";
 import { createKapitiCouncilAdapter } from "./kapitiCouncil";
 import { createTradeMeAdapter } from "./propertySearches";
 import { createRealestateAdapter } from "./realestate";
+import { createHomesNzAdapter } from "./homesNz";
 import { createMockPropertyAdapter } from "./mockProperties";
 import { createMockSchoolAdapter } from "./mockSchools";
 
@@ -16,6 +17,7 @@ export interface ConfiguredAdapter {
 export function allConfiguredAdapters(): ConfiguredAdapter[] {
   return [
     { adapter: createTradeMeAdapter(), status: "not_implemented" },
+    { adapter: createHomesNzAdapter(), status: "active" },
     { adapter: createRealestateAdapter(), status: "active" },
     { adapter: createEducationCountsAdapter(), status: "active" },
     { adapter: createKapitiCouncilAdapter(), status: "active" },
