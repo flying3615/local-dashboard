@@ -55,6 +55,23 @@ type PropertyListingRow = {
   platform: string;
   watch_status: WatchStatus;
   notes: string | null;
+  estimated_value_low: number | null;
+  estimated_value_high: number | null;
+  estimated_value_date: string | null;
+  capital_value: number | null;
+  land_value: number | null;
+  improvement_value: number | null;
+  cv_date: string | null;
+  estimated_rental_low: number | null;
+  estimated_rental_high: number | null;
+  estimated_rental_yield: string | null;
+  decade_built: string | null;
+  contour: string | null;
+  building_construction: string | null;
+  ownership_type: string | null;
+  legal_description: string | null;
+  certificate_of_title: string | null;
+  image_url: string | null;
 };
 
 type SourceRow = {
@@ -336,7 +353,24 @@ export function createRepositories(db: AppDatabase) {
               open_home_times,
               platform,
               watch_status,
-              notes
+              notes,
+              estimated_value_low,
+              estimated_value_high,
+              estimated_value_date,
+              capital_value,
+              land_value,
+              improvement_value,
+              cv_date,
+              estimated_rental_low,
+              estimated_rental_high,
+              estimated_rental_yield,
+              decade_built,
+              contour,
+              building_construction,
+              ownership_type,
+              legal_description,
+              certificate_of_title,
+              image_url
             )
             VALUES (
               @id,
@@ -353,7 +387,24 @@ export function createRepositories(db: AppDatabase) {
               @openHomeTimes,
               @platform,
               @watchStatus,
-              @notes
+              @notes,
+              @estimatedValueLow,
+              @estimatedValueHigh,
+              @estimatedValueDate,
+              @capitalValue,
+              @landValue,
+              @improvementValue,
+              @cvDate,
+              @estimatedRentalLow,
+              @estimatedRentalHigh,
+              @estimatedRentalYield,
+              @decadeBuilt,
+              @contour,
+              @buildingConstruction,
+              @ownershipType,
+              @legalDescription,
+              @certificateOfTitle,
+              @imageUrl
             )
             ON CONFLICT(item_id) DO UPDATE SET
               id = excluded.id,
@@ -370,6 +421,23 @@ export function createRepositories(db: AppDatabase) {
               platform = excluded.platform,
               watch_status = excluded.watch_status,
               notes = excluded.notes,
+              estimated_value_low = excluded.estimated_value_low,
+              estimated_value_high = excluded.estimated_value_high,
+              estimated_value_date = excluded.estimated_value_date,
+              capital_value = excluded.capital_value,
+              land_value = excluded.land_value,
+              improvement_value = excluded.improvement_value,
+              cv_date = excluded.cv_date,
+              estimated_rental_low = excluded.estimated_rental_low,
+              estimated_rental_high = excluded.estimated_rental_high,
+              estimated_rental_yield = excluded.estimated_rental_yield,
+              decade_built = excluded.decade_built,
+              contour = excluded.contour,
+              building_construction = excluded.building_construction,
+              ownership_type = excluded.ownership_type,
+              legal_description = excluded.legal_description,
+              certificate_of_title = excluded.certificate_of_title,
+              image_url = excluded.image_url,
               updated_at = CURRENT_TIMESTAMP
           `,
         ).run({
@@ -665,6 +733,23 @@ function mapPropertyListingRow(row: PropertyListingRow): PropertyListing {
     platform: row.platform,
     watchStatus: row.watch_status,
     notes: row.notes,
+    estimatedValueLow: row.estimated_value_low,
+    estimatedValueHigh: row.estimated_value_high,
+    estimatedValueDate: row.estimated_value_date,
+    capitalValue: row.capital_value,
+    landValue: row.land_value,
+    improvementValue: row.improvement_value,
+    cvDate: row.cv_date,
+    estimatedRentalLow: row.estimated_rental_low,
+    estimatedRentalHigh: row.estimated_rental_high,
+    estimatedRentalYield: row.estimated_rental_yield,
+    decadeBuilt: row.decade_built,
+    contour: row.contour,
+    buildingConstruction: row.building_construction,
+    ownershipType: row.ownership_type,
+    legalDescription: row.legal_description,
+    certificateOfTitle: row.certificate_of_title,
+    imageUrl: row.image_url,
   });
 }
 

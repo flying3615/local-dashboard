@@ -67,6 +67,23 @@ export function applySchema(db: Database.Database): void {
       platform TEXT NOT NULL,
       watch_status TEXT NOT NULL,
       notes TEXT,
+      estimated_value_low INTEGER,
+      estimated_value_high INTEGER,
+      estimated_value_date TEXT,
+      capital_value INTEGER,
+      land_value INTEGER,
+      improvement_value INTEGER,
+      cv_date TEXT,
+      estimated_rental_low INTEGER,
+      estimated_rental_high INTEGER,
+      estimated_rental_yield TEXT,
+      decade_built TEXT,
+      contour TEXT,
+      building_construction TEXT,
+      ownership_type TEXT,
+      legal_description TEXT,
+      certificate_of_title TEXT,
+      image_url TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
@@ -137,4 +154,28 @@ export function applySchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS notes_entity_idx
       ON notes(entity_type, entity_id);
   `);
+
+    // Safe migration for existing databases (tolerate column-already-exists)
+    const propertyMigrations = [
+      "ALTER TABLE property_listings ADD COLUMN estimated_value_low INTEGER",
+      "ALTER TABLE property_listings ADD COLUMN estimated_value_high INTEGER",
+      "ALTER TABLE property_listings ADD COLUMN estimated_value_date TEXT",
+      "ALTER TABLE property_listings ADD COLUMN capital_value INTEGER",
+      "ALTER TABLE property_listings ADD COLUMN land_value INTEGER",
+      "ALTER TABLE property_listings ADD COLUMN improvement_value INTEGER",
+      "ALTER TABLE property_listings ADD COLUMN cv_date TEXT",
+      "ALTER TABLE property_listings ADD COLUMN estimated_rental_low INTEGER",
+      "ALTER TABLE property_listings ADD COLUMN estimated_rental_high INTEGER",
+      "ALTER TABLE property_listings ADD COLUMN estimated_rental_yield TEXT",
+      "ALTER TABLE property_listings ADD COLUMN decade_built TEXT",
+      "ALTER TABLE property_listings ADD COLUMN contour TEXT",
+      "ALTER TABLE property_listings ADD COLUMN building_construction TEXT",
+      "ALTER TABLE property_listings ADD COLUMN ownership_type TEXT",
+      "ALTER TABLE property_listings ADD COLUMN legal_description TEXT",
+      "ALTER TABLE property_listings ADD COLUMN certificate_of_title TEXT",
+      "ALTER TABLE property_listings ADD COLUMN image_url TEXT",
+    ];
+    for (const sql of propertyMigrations) {
+      try { db.exec(sql); } catch { /* column already exists */ }
+    }
 }
