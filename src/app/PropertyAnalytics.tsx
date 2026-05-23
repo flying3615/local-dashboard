@@ -148,7 +148,7 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 margin={{ left: 10, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <XAxis type="number" tick={{ fontSize: 11 }} scale="log" domain={["auto", "auto"]} />
                 <YAxis
                   type="category"
                   dataKey="address"
