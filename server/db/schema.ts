@@ -42,6 +42,7 @@ export function applySchema(db: Database.Database): void {
       status TEXT NOT NULL,
       tags TEXT NOT NULL,
       raw_snapshot_id TEXT,
+      last_seen_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (source_id) REFERENCES sources(id) ON DELETE CASCADE,
@@ -157,6 +158,7 @@ export function applySchema(db: Database.Database): void {
 
     // Safe migration for existing databases (tolerate column-already-exists)
     const propertyMigrations = [
+      "ALTER TABLE items ADD COLUMN last_seen_at TEXT",
       "ALTER TABLE property_listings ADD COLUMN estimated_value_low INTEGER",
       "ALTER TABLE property_listings ADD COLUMN estimated_value_high INTEGER",
       "ALTER TABLE property_listings ADD COLUMN estimated_value_date TEXT",

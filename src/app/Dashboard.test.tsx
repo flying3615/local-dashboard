@@ -19,6 +19,7 @@ function makeItem(overrides = {}) {
     status: "new" as const,
     tags: ["paraparaumu", "open_home_soon"],
     rawSnapshotId: null,
+    lastSeenAt: null,
     ...overrides,
   };
 }

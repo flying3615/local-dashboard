@@ -79,6 +79,7 @@ export function normalizePropertyListing(
       status: "new",
       tags: initialTags,
       rawSnapshotId: raw.rawSnapshotId ?? null,
+      lastSeenAt: null,
     },
     property: {
       id: `property_${stableHash(itemId)}`,
