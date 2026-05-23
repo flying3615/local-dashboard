@@ -33,12 +33,12 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
   const scatterData = useMemo(
     () =>
       metrics
-        .filter((m) => m.price != null && m.estimateMid != null)
+        .filter((m) => m.price != null && m.capitalValue != null)
         .map((m) => ({
           address: m.address,
           price: m.price!,
-          estimate: m.estimateMid!,
-          gap: m.estimateGap!,
+          cv: m.capitalValue!,
+          gap: m.cvGap!,
         })),
     [metrics],
   );
@@ -173,9 +173,9 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
         {scatterData.length >= 2 && (
           <section className="detail-card">
             <h3 className="detail-card-title">
-              Price vs HomesEstimate
+              Price vs CV (Council Valuation)
               <span className="analytics-hint">
-                Above line = priced above estimate
+                Above line = priced above CV
               </span>
             </h3>
             <ResponsiveContainer width="100%" height={320}>
@@ -183,8 +183,8 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis
                   type="number"
-                  dataKey="estimate"
-                  name="Estimate"
+                  dataKey="cv"
+                  name="CV"
                   tick={{ fontSize: 11 }}
                   tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
                   domain={["dataMin", "dataMax"]}
@@ -201,14 +201,14 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                   stroke="#999"
                   strokeDasharray="5 5"
                   segment={[
-                    { x: Math.min(...scatterData.map((d) => Math.min(d.price, d.estimate))), y: Math.min(...scatterData.map((d) => Math.min(d.price, d.estimate))) },
-                    { x: Math.max(...scatterData.map((d) => Math.max(d.price, d.estimate))), y: Math.max(...scatterData.map((d) => Math.max(d.price, d.estimate))) },
+                    { x: Math.min(...scatterData.map((d) => Math.min(d.price, d.cv))), y: Math.min(...scatterData.map((d) => Math.min(d.price, d.cv))) },
+                    { x: Math.max(...scatterData.map((d) => Math.max(d.price, d.cv))), y: Math.max(...scatterData.map((d) => Math.max(d.price, d.cv))) },
                   ]}
                 />
                 <Tooltip
                   formatter={(value, name) => [
                     `$${Number(value).toLocaleString()}`,
-                    name === "price" ? "Listing Price" : "HomesEstimate",
+                    name === "price" ? "Listing Price" : "Council Valuation",
                   ]}
                   labelFormatter={() => ""}
                   contentStyle={{

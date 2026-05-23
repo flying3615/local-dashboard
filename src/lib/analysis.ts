@@ -9,6 +9,8 @@ export interface PropertyMetric {
   pricePerM2Floor: number | null;
   estimateMid: number | null;
   estimateGap: number | null;
+  capitalValue: number | null;
+  cvGap: number | null;
   daysOnMarket: number | null;
   bedrooms: number | null;
   landArea: number | null;
@@ -102,6 +104,12 @@ export function computeMetrics(
       }
     }
 
+    const cv = property?.capitalValue ?? null;
+    let cvGap: number | null = null;
+    if (price != null && cv != null && cv > 0) {
+      cvGap = Math.round(((price - cv) / cv) * 100);
+    }
+
     let daysOnMarket: number | null = null;
     if (property?.listedAt) {
       const listedMs = Date.parse(property.listedAt);
@@ -119,6 +127,8 @@ export function computeMetrics(
       pricePerM2Floor,
       estimateMid,
       estimateGap,
+      capitalValue: cv,
+      cvGap,
       daysOnMarket,
       bedrooms: property?.bedrooms ?? null,
       landArea,
