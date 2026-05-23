@@ -911,7 +911,56 @@
 .analytics-charts {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+}
+
+/* Collapsible sections */
+.analytics-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.analytics-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.analytics-section-header:hover {
+  background: #fafafa;
+}
+
+.analytics-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  color: var(--color-text-muted);
+}
+
+.analytics-section--open .analytics-chevron {
+  transform: rotate(90deg);
+}
+
+.analytics-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text);
+}
+
+.analytics-section-body {
+  padding: 0 18px 18px;
 }
 
 .analytics-hint {

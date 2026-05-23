@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -25,7 +25,30 @@ interface PropertyAnalyticsProps {
   properties: PropertyWithItem[];
 }
 
+const SECTIONS = [
+  "distribution",
+  "priceLand",
+  "priceFloor",
+  "scatter",
+  "daysOnMarket",
+  "estimateGap",
+  "suburb",
+] as const;
+
+type SectionId = (typeof SECTIONS)[number];
+
 export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
+  const [open, setOpen] = useState<Set<SectionId>>(new Set(["distribution"]));
+
+  const toggle = (id: SectionId) => {
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const metrics = useMemo(() => computeMetrics(properties), [properties]);
   const histogram = useMemo(() => buildPriceHistogram(metrics), [metrics]);
   const pricePerM2 = useMemo(() => buildPricePerM2Data(metrics, "pricePerM2Land"), [metrics]);
@@ -137,8 +160,12 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
 
       <div className="analytics-charts">
         {histogram.length > 0 && (
-          <section className="detail-card">
-            <h3 className="detail-card-title">Price Distribution</h3>
+          <Section
+            id="distribution"
+            title="Price Distribution"
+            open={open.has("distribution")}
+            onToggle={toggle}
+          >
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={histogram}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -162,12 +189,16 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </section>
+          </Section>
         )}
 
         {pricePerM2.length > 0 && (
-          <section className="detail-card">
-            <h3 className="detail-card-title">Price per m² (Land)</h3>
+          <Section
+            id="priceLand"
+            title="Price per m² (Land)"
+            open={open.has("priceLand")}
+            onToggle={toggle}
+          >
             <ResponsiveContainer width="100%" height={Math.max(200, pricePerM2.length * 28)}>
               <BarChart
                 data={pricePerM2}
@@ -194,17 +225,53 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </section>
+          </Section>
+        )}
+
+        {pricePerM2Floor.length > 0 && (
+          <Section
+            id="priceFloor"
+            title="Price per m² (Floor)"
+            open={open.has("priceFloor")}
+            onToggle={toggle}
+          >
+            <ResponsiveContainer width="100%" height={Math.max(200, pricePerM2Floor.length * 28)}>
+              <BarChart
+                data={pricePerM2Floor}
+                layout="vertical"
+                margin={{ left: 10, right: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis type="number" tick={{ fontSize: 11 }} scale="log" domain={["auto", "auto"]} />
+                <YAxis
+                  type="category"
+                  dataKey="address"
+                  width={180}
+                  tick={{ fontSize: 10 }}
+                />
+                <Tooltip
+                  formatter={(value) => [`$${Number(value).toLocaleString()}`, "$/m² floor"]}
+                  contentStyle={{
+                    background: "#fff",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: 6,
+                    fontSize: 13,
+                  }}
+                />
+                <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Section>
         )}
 
         {scatterData.length >= 2 && (
-          <section className="detail-card">
-            <h3 className="detail-card-title">
-              Price vs CV (Council Valuation)
-              <span className="analytics-hint">
-                Above line = priced above CV
-              </span>
-            </h3>
+          <Section
+            id="scatter"
+            title="Price vs CV (Council Valuation)"
+            hint="Above line = priced above CV"
+            open={open.has("scatter")}
+            onToggle={toggle}
+          >
             <ResponsiveContainer width="100%" height={320}>
               <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -233,10 +300,6 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                   ]}
                 />
                 <Tooltip
-                  formatter={(value, name) => [
-                    `$${Number(value).toLocaleString()}`,
-                    name === "Price" ? "Listing Price" : "Council Valuation",
-                  ]}
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const d = payload[0].payload as { address: string; price: number; cv: number };
@@ -256,12 +319,16 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 />
               </ScatterChart>
             </ResponsiveContainer>
-          </section>
+          </Section>
         )}
 
         {daysOnMarketData.length > 0 && (
-          <section className="detail-card">
-            <h3 className="detail-card-title">Days on Market</h3>
+          <Section
+            id="daysOnMarket"
+            title="Days on Market"
+            open={open.has("daysOnMarket")}
+            onToggle={toggle}
+          >
             <ResponsiveContainer width="100%" height={Math.max(200, daysOnMarketData.length * 28)}>
               <BarChart
                 data={daysOnMarketData}
@@ -292,49 +359,17 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 />
               </BarChart>
             </ResponsiveContainer>
-          </section>
-        )}
-
-        {pricePerM2Floor.length > 0 && (
-          <section className="detail-card">
-            <h3 className="detail-card-title">Price per m² (Floor)</h3>
-            <ResponsiveContainer width="100%" height={Math.max(200, pricePerM2Floor.length * 28)}>
-              <BarChart
-                data={pricePerM2Floor}
-                layout="vertical"
-                margin={{ left: 10, right: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis type="number" tick={{ fontSize: 11 }} scale="log" domain={["auto", "auto"]} />
-                <YAxis
-                  type="category"
-                  dataKey="address"
-                  width={180}
-                  tick={{ fontSize: 10 }}
-                />
-                <Tooltip
-                  formatter={(value) => [`$${Number(value).toLocaleString()}`, "$/m² floor"]}
-                  contentStyle={{
-                    background: "#fff",
-                    border: "1px solid #e0e0e0",
-                    borderRadius: 6,
-                    fontSize: 13,
-                  }}
-                />
-                <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </section>
+          </Section>
         )}
 
         {estimateGapData.length > 0 && (
-          <section className="detail-card">
-            <h3 className="detail-card-title">
-              Price vs HomesEstimate
-              <span className="analytics-hint">
-                Positive = priced above estimate
-              </span>
-            </h3>
+          <Section
+            id="estimateGap"
+            title="Price vs HomesEstimate"
+            hint="Positive = priced above estimate"
+            open={open.has("estimateGap")}
+            onToggle={toggle}
+          >
             <table className="property-table">
               <thead>
                 <tr>
@@ -366,12 +401,16 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 ))}
               </tbody>
             </table>
-          </section>
+          </Section>
         )}
 
         {suburbSummary.length > 0 && (
-          <section className="detail-card">
-            <h3 className="detail-card-title">Suburb Breakdown</h3>
+          <Section
+            id="suburb"
+            title="Suburb Breakdown"
+            open={open.has("suburb")}
+            onToggle={toggle}
+          >
             <table className="property-table">
               <thead>
                 <tr>
@@ -400,10 +439,53 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 ))}
               </tbody>
             </table>
-          </section>
+          </Section>
         )}
       </div>
     </div>
+  );
+}
+
+function Section({
+  id,
+  title,
+  hint,
+  open,
+  onToggle,
+  children,
+}: {
+  id: SectionId;
+  title: string;
+  hint?: string;
+  open: boolean;
+  onToggle: (id: SectionId) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`analytics-section ${open ? "analytics-section--open" : ""}`}>
+      <button
+        className="analytics-section-header"
+        onClick={() => onToggle(id)}
+        aria-expanded={open}
+      >
+        <svg
+          className="analytics-chevron"
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M4 2l4 4-4 4" />
+        </svg>
+        <span className="analytics-section-title">{title}</span>
+        {hint && <span className="analytics-hint">{hint}</span>}
+      </button>
+      {open && <div className="analytics-section-body">{children}</div>}
+    </section>
   );
 }
 

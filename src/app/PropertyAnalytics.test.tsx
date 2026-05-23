@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { PropertyWithItem } from "../lib/api";
@@ -76,7 +77,8 @@ describe("PropertyAnalytics", () => {
     expect(summary.textContent).toContain("$1,750");
   });
 
-  it("renders suburb breakdown table", () => {
+  it("renders suburb breakdown table after expanding", async () => {
+    const user = userEvent.setup();
     const props = [
       makeProperty(),
       makeProperty({
@@ -85,7 +87,8 @@ describe("PropertyAnalytics", () => {
       }),
     ];
     render(<PropertyAnalytics properties={props} />);
-    expect(screen.getByText("Suburb Breakdown")).toBeInTheDocument();
+    const btn = screen.getByRole("button", { name: /suburb breakdown/i });
+    await user.click(btn);
     expect(screen.getByText("Paraparaumu")).toBeInTheDocument();
     expect(screen.getByText("Raumati")).toBeInTheDocument();
   });
