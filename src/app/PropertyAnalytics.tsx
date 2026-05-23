@@ -210,12 +210,16 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                     `$${Number(value).toLocaleString()}`,
                     name === "Price" ? "Listing Price" : "Council Valuation",
                   ]}
-                  labelFormatter={() => ""}
-                  contentStyle={{
-                    background: "#fff",
-                    border: "1px solid #e0e0e0",
-                    borderRadius: 6,
-                    fontSize: 13,
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload as { address: string; price: number; cv: number };
+                    return (
+                      <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 6, padding: "8px 12px", fontSize: 13 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 4 }}>{d.address}</div>
+                        <div>Listing Price: ${d.price.toLocaleString()}</div>
+                        <div>Council Valuation: ${d.cv.toLocaleString()}</div>
+                      </div>
+                    );
                   }}
                 />
                 <Scatter

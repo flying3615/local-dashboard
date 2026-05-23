@@ -165,20 +165,21 @@ export function buildPriceHistogram(
 }
 
 export function buildSuburbSummary(metrics: PropertyMetric[]): SuburbSummary[] {
-  const groups = new Map<string, PropertyMetric[]>();
+  const groups = new Map<string, { display: string; items: PropertyMetric[] }>();
 
   for (const m of metrics) {
-    const existing = groups.get(m.suburb);
+    const key = m.suburb.toLowerCase();
+    const existing = groups.get(key);
     if (existing) {
-      existing.push(m);
+      existing.items.push(m);
     } else {
-      groups.set(m.suburb, [m]);
+      groups.set(key, { display: m.suburb, items: [m] });
     }
   }
 
   return [...groups.entries()]
-    .map(([suburb, items]) => ({
-      suburb,
+    .map(([, { display, items }]) => ({
+      suburb: display,
       count: items.length,
       medianPrice: median(
         items.map((i) => i.price).filter((p): p is number => p != null),
