@@ -8,7 +8,7 @@ interface PropertyDetailProps {
 }
 
 export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
-  const { item, property, source, links, notes } = detail;
+  const { item, property, source, notes } = detail;
 
   const hasFinancials =
     property?.estimatedValueLow != null ||
@@ -268,13 +268,6 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
               </time>
             </div>
           ))}
-        </section>
-      )}
-
-      {links.length > 0 && (
-        <section className="detail-card">
-          <h3 className="detail-card-title">Linked Items</h3>
-          <p className="detail-muted">{links.length} link(s) found</p>
         </section>
       )}
     </div>

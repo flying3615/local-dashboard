@@ -109,8 +109,6 @@ describe("PropertyDetail", () => {
     expect(screen.getByText("paraparaumu")).toBeInTheDocument();
     expect(screen.getByText("open home soon")).toBeInTheDocument();
     expect(screen.getByText("Close to bus stop and shops")).toBeInTheDocument();
-    expect(screen.getByText("Linked Items")).toBeInTheDocument();
-    expect(screen.getByText("1 link(s) found")).toBeInTheDocument();
   });
 
   it("shows the original listing link even when source metadata is available", () => {
