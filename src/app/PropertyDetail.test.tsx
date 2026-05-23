@@ -110,6 +110,15 @@ describe("PropertyDetail", () => {
     expect(screen.getByText("1 link(s) found")).toBeInTheDocument();
   });
 
+  it("shows the original listing link even when source metadata is available", () => {
+    render(<PropertyDetail detail={makeDetail()} />);
+
+    expect(screen.getByRole("link", { name: "Original listing" })).toHaveAttribute(
+      "href",
+      "https://example.com/listing",
+    );
+  });
+
   it("shows open home times", () => {
     render(<PropertyDetail detail={makeDetail()} />);
 

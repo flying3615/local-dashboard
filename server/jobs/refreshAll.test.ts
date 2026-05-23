@@ -181,6 +181,37 @@ describe("refreshAll", () => {
     ]);
   });
 
+  it("force refreshes enabled sources before refresh interval has elapsed", async () => {
+    const db = createInMemoryDatabase();
+    dbs.add(db);
+    const repos = createRepositories(db);
+    let fetchCount = 0;
+    const adapter: SourceAdapter = {
+      ...createMockPropertyAdapter(),
+      async fetch() {
+        fetchCount += 1;
+        return createMockPropertyAdapter().fetch();
+      },
+    };
+
+    await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-17T00:00:00.000Z",
+    });
+    const result = await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-17T01:00:00.000Z",
+      force: true,
+    });
+
+    expect(fetchCount).toBe(2);
+    expect(result).toEqual([
+      { sourceId: adapter.sourceId, status: "success", recordsProcessed: 1 },
+    ]);
+  });
+
   it("continues refreshing later adapters when one adapter fails", async () => {
     const db = createInMemoryDatabase();
     dbs.add(db);

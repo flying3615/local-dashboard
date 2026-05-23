@@ -18,6 +18,7 @@ export interface RefreshAllOptions {
   repositories: Repositories;
   adapters?: SourceAdapter[];
   now?: () => string;
+  force?: boolean;
 }
 
 export interface RefreshAdapterResult {
@@ -31,6 +32,7 @@ export async function refreshAll({
   repositories,
   adapters = [createMockPropertyAdapter(), createMockSchoolAdapter()],
   now = () => new Date().toISOString(),
+  force = false,
 }: RefreshAllOptions): Promise<RefreshAdapterResult[]> {
   const results: RefreshAdapterResult[] = [];
 
@@ -48,7 +50,7 @@ export async function refreshAll({
       continue;
     }
 
-    if (!shouldRefresh(source, fetchedAt)) {
+    if (!force && !shouldRefresh(source, fetchedAt)) {
       results.push({
         sourceId: adapter.sourceId,
         status: "skipped",

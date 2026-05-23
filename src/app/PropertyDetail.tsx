@@ -207,10 +207,12 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
 
       <section className="detail-section">
         <h3>Source</h3>
-        {source && <SourceLink name={source.name} url={source.url} />}
-        {!source && item.sourceUrl && (
-          <SourceLink name="View original" url={item.sourceUrl} />
-        )}
+        <div className="source-link-group">
+          {item.sourceUrl && (
+            <SourceLink name="Original listing" url={item.sourceUrl} />
+          )}
+          {source && <SourceLink name={source.name} url={source.url} />}
+        </div>
       </section>
 
       {notes.length > 0 && (

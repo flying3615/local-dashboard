@@ -266,6 +266,33 @@ describe("API routes", () => {
     expect(Array.isArray(detail.notes)).toBe(true);
   });
 
+  it("POST /api/sources/:id/refresh forces a manual refresh", async () => {
+    const adapter = createMockPropertyAdapter();
+    repos.sources.upsert({
+      id: adapter.sourceId,
+      name: adapter.source.name,
+      type: adapter.source.type,
+      url: adapter.source.url,
+      trustLevel: adapter.source.trustLevel,
+      enabled: true,
+      refreshIntervalMinutes: 720,
+      lastSuccessAt: new Date().toISOString(),
+      lastError: null,
+    });
+
+    const res = await fetch(`${url}/api/sources/${adapter.sourceId}/refresh`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body).toMatchObject({
+      sourceId: adapter.sourceId,
+      status: "success",
+      recordsProcessed: 1,
+    });
+  });
+
   it("POST /api/sources/:id/refresh returns 404 for unknown source", async () => {
     const res = await fetch(`${url}/api/sources/unknown_source/refresh`, {
       method: "POST",

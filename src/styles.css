@@ -209,6 +209,12 @@
   text-decoration: underline;
 }
 
+.source-link-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
 /* ---- Badges ---- */
 .badge {
   display: inline-block;

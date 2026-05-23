@@ -153,6 +153,7 @@ export function createApiRoutes(
     const results = await refreshAll({
       repositories,
       adapters: [adapter],
+      force: true,
     });
 
     res.json(results[0]);
