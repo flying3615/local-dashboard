@@ -1,0 +1,17 @@
+ALTER TABLE property_listings ADD COLUMN estimated_value_low INTEGER;
+ALTER TABLE property_listings ADD COLUMN estimated_value_high INTEGER;
+ALTER TABLE property_listings ADD COLUMN estimated_value_date TEXT;
+ALTER TABLE property_listings ADD COLUMN capital_value INTEGER;
+ALTER TABLE property_listings ADD COLUMN land_value INTEGER;
+ALTER TABLE property_listings ADD COLUMN improvement_value INTEGER;
+ALTER TABLE property_listings ADD COLUMN cv_date TEXT;
+ALTER TABLE property_listings ADD COLUMN estimated_rental_low INTEGER;
+ALTER TABLE property_listings ADD COLUMN estimated_rental_high INTEGER;
+ALTER TABLE property_listings ADD COLUMN estimated_rental_yield TEXT;
+ALTER TABLE property_listings ADD COLUMN decade_built TEXT;
+ALTER TABLE property_listings ADD COLUMN contour TEXT;
+ALTER TABLE property_listings ADD COLUMN building_construction TEXT;
+ALTER TABLE property_listings ADD COLUMN ownership_type TEXT;
+ALTER TABLE property_listings ADD COLUMN legal_description TEXT;
+ALTER TABLE property_listings ADD COLUMN certificate_of_title TEXT;
+ALTER TABLE property_listings ADD COLUMN image_url TEXT;

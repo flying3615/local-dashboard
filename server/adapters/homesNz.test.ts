@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { gzipSync } from "node:zlib";
 import {
   createHomesNzAdapter,
   type CacheStore,
@@ -37,11 +38,35 @@ function response(body: string, ok = true) {
   return {
     ok,
     status: ok ? 200 : 404,
+    headers: new Headers(),
     async text() {
       return body;
     },
+    async arrayBuffer() {
+      return new TextEncoder().encode(body).buffer;
+    },
     async json() {
       return JSON.parse(body);
+    },
+  };
+}
+
+function binaryResponse(body: Uint8Array, ok = true) {
+  return {
+    ok,
+    status: ok ? 200 : 404,
+    headers: new Headers(),
+    async text() {
+      return new TextDecoder().decode(body);
+    },
+    async arrayBuffer() {
+      return body.buffer.slice(
+        body.byteOffset,
+        body.byteOffset + body.byteLength,
+      );
+    },
+    async json() {
+      return JSON.parse(new TextDecoder().decode(body));
     },
   };
 }
@@ -135,6 +160,33 @@ const WAw7b_details: Record<string, unknown> = {
 // ── Tests ───────────────────────────────────────────────────────
 
 describe("homesNz adapter", () => {
+  it("decompresses homes.co.nz gzip sitemaps before matching Paraparaumu URLs", async () => {
+    const sitemap = sitemapXml([eBB0X_entry]);
+
+    async function mockFetch(url: string) {
+      if (url.includes("sitemapv2_properties")) {
+        return binaryResponse(gzipSync(sitemap));
+      }
+      if (url.includes("eBB0X")) {
+        return response(propertyPage(eBB0X_details));
+      }
+      return response("", false);
+    }
+
+    const adapter = createHomesNzAdapter({
+      fetchImpl: mockFetch,
+      sitemapCacheStore: memorySitemapCache().store,
+      propertyCacheStore: memoryPropertyCache().store,
+      maxPropertiesPerFetch: 1,
+      throttleMs: 0,
+    });
+
+    const records = await adapter.fetch();
+
+    expect(records).toHaveLength(1);
+    expect(records[0]?.sourceUrl).toBe(eBB0X_entry.url);
+  });
+
   it("discovers Paraparaumu properties from sitemaps and extracts data from SSR pages", async () => {
     const sitemapCache = memorySitemapCache();
     const propertyCache = memoryPropertyCache();

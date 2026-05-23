@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 import type { SourceAdapter } from "./types";
 import type { RawPropertyListing } from "../pipeline/normalize";
@@ -12,7 +13,9 @@ const PROPERTY_CACHE_PATH = "data/homes-nz-property-cache.json";
 type FetchResponse = {
   ok: boolean;
   status: number;
+  headers?: Headers;
   text(): Promise<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
   json(): Promise<unknown>;
 };
 
@@ -146,7 +149,7 @@ async function discoverParaparaumuProperties(
       );
     }
 
-    const text = await response.text();
+    const text = await readSitemapText(response);
     const blockRegex =
       /<url>\s*<loc>(https:\/\/homes\.co\.nz\/address\/paraparaumu\/([^<]+)\/([^<]+)\/([A-Za-z0-9]+))<\/loc>/g;
 
@@ -166,6 +169,14 @@ async function discoverParaparaumuProperties(
 
   await sitemapCacheStore.write({ fetchedAt: now, properties: allProperties });
   return allProperties;
+}
+
+async function readSitemapText(response: FetchResponse): Promise<string> {
+  const body = Buffer.from(await response.arrayBuffer());
+  if (body[0] === 0x1f && body[1] === 0x8b) {
+    return gunzipSync(body).toString("utf8");
+  }
+  return body.toString("utf8");
 }
 
 function findChanged(

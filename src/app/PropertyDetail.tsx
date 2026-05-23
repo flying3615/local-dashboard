@@ -162,7 +162,7 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
           {property?.decadeBuilt && (
             <>
               <dt>Decade Built</dt>
-              <dd>{property.decadeBuilt}s</dd>
+              <dd>{property.decadeBuilt}</dd>
             </>
           )}
           {property?.contour && (

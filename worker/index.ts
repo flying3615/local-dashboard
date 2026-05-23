@@ -39,6 +39,23 @@ type PropertyRow = {
   platform: string;
   watch_status: string;
   notes: string | null;
+  estimated_value_low: number | null;
+  estimated_value_high: number | null;
+  estimated_value_date: string | null;
+  capital_value: number | null;
+  land_value: number | null;
+  improvement_value: number | null;
+  cv_date: string | null;
+  estimated_rental_low: number | null;
+  estimated_rental_high: number | null;
+  estimated_rental_yield: string | null;
+  decade_built: string | null;
+  contour: string | null;
+  building_construction: string | null;
+  ownership_type: string | null;
+  legal_description: string | null;
+  certificate_of_title: string | null;
+  image_url: string | null;
 };
 
 type SourceRow = {
@@ -357,6 +374,23 @@ function mapPropertyRow(row: PropertyRow) {
     platform: row.platform,
     watchStatus: row.watch_status,
     notes: row.notes,
+    estimatedValueLow: row.estimated_value_low,
+    estimatedValueHigh: row.estimated_value_high,
+    estimatedValueDate: row.estimated_value_date,
+    capitalValue: row.capital_value,
+    landValue: row.land_value,
+    improvementValue: row.improvement_value,
+    cvDate: row.cv_date,
+    estimatedRentalLow: row.estimated_rental_low,
+    estimatedRentalHigh: row.estimated_rental_high,
+    estimatedRentalYield: row.estimated_rental_yield,
+    decadeBuilt: row.decade_built,
+    contour: row.contour,
+    buildingConstruction: row.building_construction,
+    ownershipType: row.ownership_type,
+    legalDescription: row.legal_description,
+    certificateOfTitle: row.certificate_of_title,
+    imageUrl: row.image_url,
   };
 }
 
