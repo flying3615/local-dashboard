@@ -28,7 +28,8 @@ interface PropertyAnalyticsProps {
 export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
   const metrics = useMemo(() => computeMetrics(properties), [properties]);
   const histogram = useMemo(() => buildPriceHistogram(metrics), [metrics]);
-  const pricePerM2 = useMemo(() => buildPricePerM2Data(metrics), [metrics]);
+  const pricePerM2 = useMemo(() => buildPricePerM2Data(metrics, "pricePerM2Land"), [metrics]);
+  const pricePerM2Floor = useMemo(() => buildPricePerM2Data(metrics, "pricePerM2Floor"), [metrics]);
   const suburbSummary = useMemo(() => buildSuburbSummary(metrics), [metrics]);
   const scatterData = useMemo(
     () =>
@@ -39,6 +40,32 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
           price: m.price!,
           cv: m.capitalValue!,
           gap: m.cvGap!,
+        })),
+    [metrics],
+  );
+
+  const daysOnMarketData = useMemo(
+    () =>
+      metrics
+        .filter((m) => m.daysOnMarket != null && m.daysOnMarket >= 0)
+        .sort((a, b) => (b.daysOnMarket ?? 0) - (a.daysOnMarket ?? 0))
+        .map((m) => ({
+          address: truncate(m.address, 35),
+          days: m.daysOnMarket!,
+        })),
+    [metrics],
+  );
+
+  const estimateGapData = useMemo(
+    () =>
+      metrics
+        .filter((m) => m.estimateGap != null)
+        .sort((a, b) => (b.estimateGap ?? 0) - (a.estimateGap ?? 0))
+        .map((m) => ({
+          address: m.address,
+          price: m.price!,
+          estimateMid: m.estimateMid!,
+          gap: m.estimateGap!,
         })),
     [metrics],
   );
@@ -232,6 +259,116 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
           </section>
         )}
 
+        {daysOnMarketData.length > 0 && (
+          <section className="detail-card">
+            <h3 className="detail-card-title">Days on Market</h3>
+            <ResponsiveContainer width="100%" height={Math.max(200, daysOnMarketData.length * 28)}>
+              <BarChart
+                data={daysOnMarketData}
+                layout="vertical"
+                margin={{ left: 10, right: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis
+                  type="category"
+                  dataKey="address"
+                  width={180}
+                  tick={{ fontSize: 10 }}
+                />
+                <Tooltip
+                  formatter={(value) => [`${value} days`, "Listed for"]}
+                  contentStyle={{
+                    background: "#fff",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: 6,
+                    fontSize: 13,
+                  }}
+                />
+                <Bar
+                  dataKey="days"
+                  radius={[0, 4, 4, 0]}
+                  fill="#2563eb"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </section>
+        )}
+
+        {pricePerM2Floor.length > 0 && (
+          <section className="detail-card">
+            <h3 className="detail-card-title">Price per m² (Floor)</h3>
+            <ResponsiveContainer width="100%" height={Math.max(200, pricePerM2Floor.length * 28)}>
+              <BarChart
+                data={pricePerM2Floor}
+                layout="vertical"
+                margin={{ left: 10, right: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis type="number" tick={{ fontSize: 11 }} scale="log" domain={["auto", "auto"]} />
+                <YAxis
+                  type="category"
+                  dataKey="address"
+                  width={180}
+                  tick={{ fontSize: 10 }}
+                />
+                <Tooltip
+                  formatter={(value) => [`$${Number(value).toLocaleString()}`, "$/m² floor"]}
+                  contentStyle={{
+                    background: "#fff",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: 6,
+                    fontSize: 13,
+                  }}
+                />
+                <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </section>
+        )}
+
+        {estimateGapData.length > 0 && (
+          <section className="detail-card">
+            <h3 className="detail-card-title">
+              Price vs HomesEstimate
+              <span className="analytics-hint">
+                Positive = priced above estimate
+              </span>
+            </h3>
+            <table className="property-table">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Price</th>
+                  <th>Estimate</th>
+                  <th>Gap</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estimateGapData.map((d) => (
+                  <tr key={d.address}>
+                    <td className="property-address">{d.address}</td>
+                    <td>${d.price.toLocaleString()}</td>
+                    <td>${d.estimateMid.toLocaleString()}</td>
+                    <td
+                      className={
+                        d.gap > 10
+                          ? "gap-overpriced"
+                          : d.gap < -5
+                            ? "gap-bargain"
+                            : ""
+                      }
+                    >
+                      {d.gap > 0 ? "+" : ""}
+                      {d.gap}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
         {suburbSummary.length > 0 && (
           <section className="detail-card">
             <h3 className="detail-card-title">Suburb Breakdown</h3>
@@ -275,4 +412,8 @@ function formatShort(value: number): string {
     return `${(value / 1_000_000).toFixed(1)}M`;
   }
   return `${Math.round(value / 1_000)}k`;
+}
+
+function truncate(str: string, max: number): string {
+  return str.length > max ? str.slice(0, max - 1) + "…" : str;
 }

@@ -195,13 +195,14 @@ export function buildSuburbSummary(metrics: PropertyMetric[]): SuburbSummary[] {
 
 export function buildPricePerM2Data(
   metrics: PropertyMetric[],
+  field: "pricePerM2Land" | "pricePerM2Floor" = "pricePerM2Land",
 ): PricePerM2Entry[] {
   return metrics
-    .filter((m) => m.pricePerM2Land != null)
-    .sort((a, b) => (a.pricePerM2Land ?? 0) - (b.pricePerM2Land ?? 0))
+    .filter((m) => m[field] != null)
+    .sort((a, b) => (a[field] ?? 0) - (b[field] ?? 0))
     .map((m) => ({
       address: truncate(m.address, 35),
-      value: m.pricePerM2Land!,
+      value: m[field]!,
     }));
 }
 

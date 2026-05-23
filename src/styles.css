@@ -923,6 +923,16 @@
   margin-left: 8px;
 }
 
+.gap-overpriced {
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.gap-bargain {
+  color: var(--color-active);
+  font-weight: 600;
+}
+
 /* ---- Empty State ---- */
 .empty-state {
   color: var(--color-text-muted);
