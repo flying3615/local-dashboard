@@ -38,6 +38,7 @@ type ItemRow = {
   tags: string;
   raw_snapshot_id: string | null;
   last_seen_at: string | null;
+  region: string;
 };
 
 type PropertyListingRow = {
@@ -73,6 +74,7 @@ type PropertyListingRow = {
   legal_description: string | null;
   certificate_of_title: string | null;
   image_url: string | null;
+  region: string;
 };
 
 type SourceRow = {
@@ -117,6 +119,7 @@ type SchoolRow = {
   area: string;
   commute_from_paraparaumu: string | null;
   watch_status: WatchStatus;
+  region: string;
 };
 
 type SchoolEventRow = {
@@ -139,6 +142,7 @@ type NoteRow = {
 
 type ItemListFilters = {
   type?: ItemType;
+  region?: string;
 };
 
 export function createRepositories(db: AppDatabase) {
@@ -280,7 +284,8 @@ export function createRepositories(db: AppDatabase) {
               status,
               tags,
               raw_snapshot_id,
-              last_seen_at
+              last_seen_at,
+              region
             )
             VALUES (
               @id,
@@ -297,7 +302,8 @@ export function createRepositories(db: AppDatabase) {
               @status,
               @tags,
               @rawSnapshotId,
-              @lastSeenAt
+              @lastSeenAt,
+              @region
             )
             ON CONFLICT(id) DO UPDATE SET
               type = excluded.type,
@@ -314,6 +320,7 @@ export function createRepositories(db: AppDatabase) {
               tags = excluded.tags,
               raw_snapshot_id = excluded.raw_snapshot_id,
               last_seen_at = excluded.last_seen_at,
+              region = excluded.region,
               updated_at = CURRENT_TIMESTAMP
           `,
         ).run({
@@ -325,12 +332,22 @@ export function createRepositories(db: AppDatabase) {
       },
 
       list(filters: ItemListFilters = {}): Item[] {
-        const rows =
-          filters.type === undefined
-            ? (db.prepare("SELECT * FROM items ORDER BY id").all() as ItemRow[])
-            : (db
-                .prepare("SELECT * FROM items WHERE type = ? ORDER BY id")
-                .all(filters.type) as ItemRow[]);
+        const conditions: string[] = [];
+        const params: unknown[] = [];
+
+        if (filters.type !== undefined) {
+          conditions.push("type = ?");
+          params.push(filters.type);
+        }
+        if (filters.region !== undefined) {
+          conditions.push("region = ?");
+          params.push(filters.region);
+        }
+
+        const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+        const rows = db
+          .prepare(`SELECT * FROM items ${where} ORDER BY id`)
+          .all(...params) as ItemRow[];
 
         return rows.map(mapItemRow);
       },
@@ -383,7 +400,8 @@ export function createRepositories(db: AppDatabase) {
               ownership_type,
               legal_description,
               certificate_of_title,
-              image_url
+              image_url,
+              region
             )
             VALUES (
               @id,
@@ -417,7 +435,8 @@ export function createRepositories(db: AppDatabase) {
               @ownershipType,
               @legalDescription,
               @certificateOfTitle,
-              @imageUrl
+              @imageUrl,
+              @region
             )
             ON CONFLICT(item_id) DO UPDATE SET
               id = excluded.id,
@@ -451,6 +470,7 @@ export function createRepositories(db: AppDatabase) {
               legal_description = excluded.legal_description,
               certificate_of_title = excluded.certificate_of_title,
               image_url = excluded.image_url,
+              region = excluded.region,
               updated_at = CURRENT_TIMESTAMP
           `,
         ).run({
@@ -461,10 +481,14 @@ export function createRepositories(db: AppDatabase) {
         return parsed;
       },
 
-      list(): PropertyListing[] {
-        const rows = db
-          .prepare("SELECT * FROM property_listings ORDER BY id")
-          .all() as PropertyListingRow[];
+      list(region?: string): PropertyListing[] {
+        const rows = region
+          ? (db
+              .prepare("SELECT * FROM property_listings WHERE region = ? ORDER BY id")
+              .all(region) as PropertyListingRow[])
+          : (db
+              .prepare("SELECT * FROM property_listings ORDER BY id")
+              .all() as PropertyListingRow[]);
 
         return rows.map(mapPropertyListingRow);
       },
@@ -531,7 +555,8 @@ export function createRepositories(db: AppDatabase) {
               website,
               area,
               commute_from_paraparaumu,
-              watch_status
+              watch_status,
+              region
             )
             VALUES (
               @id,
@@ -544,7 +569,8 @@ export function createRepositories(db: AppDatabase) {
               @website,
               @area,
               @commuteFromParaparaumu,
-              @watchStatus
+              @watchStatus,
+              @region
             )
             ON CONFLICT(id) DO UPDATE SET
               name = excluded.name,
@@ -557,6 +583,7 @@ export function createRepositories(db: AppDatabase) {
               area = excluded.area,
               commute_from_paraparaumu = excluded.commute_from_paraparaumu,
               watch_status = excluded.watch_status,
+              region = excluded.region,
               updated_at = CURRENT_TIMESTAMP
           `,
         ).run({
@@ -567,10 +594,14 @@ export function createRepositories(db: AppDatabase) {
         return parsed;
       },
 
-      list(): School[] {
-        const rows = db
-          .prepare("SELECT * FROM schools ORDER BY name")
-          .all() as SchoolRow[];
+      list(region?: string): School[] {
+        const rows = region
+          ? (db
+              .prepare("SELECT * FROM schools WHERE region = ? ORDER BY name")
+              .all(region) as SchoolRow[])
+          : (db
+              .prepare("SELECT * FROM schools ORDER BY name")
+              .all() as SchoolRow[]);
 
         return rows.map(mapSchoolRow);
       },
@@ -727,6 +758,7 @@ function mapItemRow(row: ItemRow): Item {
     tags: JSON.parse(row.tags),
     rawSnapshotId: row.raw_snapshot_id,
     lastSeenAt: row.last_seen_at,
+    region: row.region,
   });
 }
 
@@ -764,6 +796,7 @@ function mapPropertyListingRow(row: PropertyListingRow): PropertyListing {
     legalDescription: row.legal_description,
     certificateOfTitle: row.certificate_of_title,
     imageUrl: row.image_url,
+    region: row.region,
   });
 }
 
@@ -791,6 +824,7 @@ function mapSchoolRow(row: SchoolRow): School {
     area: row.area,
     commuteFromParaparaumu: row.commute_from_paraparaumu,
     watchStatus: row.watch_status,
+    region: row.region,
   });
 }
 

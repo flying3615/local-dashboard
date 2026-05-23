@@ -72,6 +72,7 @@ export const itemSchema = z.object({
   tags: z.array(z.string()),
   rawSnapshotId: z.string().nullable(),
   lastSeenAt: z.string().nullable(),
+  region: z.string().default("kapiti"),
 });
 
 export const propertyListingSchema = z.object({
@@ -110,6 +111,7 @@ export const propertyListingSchema = z.object({
   legalDescription: z.string().nullable(),
   certificateOfTitle: z.string().nullable(),
   imageUrl: z.string().url().nullable(),
+  region: z.string().default("kapiti"),
 });
 
 export const schoolSchema = z.object({
@@ -124,6 +126,7 @@ export const schoolSchema = z.object({
   area: z.string().min(1),
   commuteFromParaparaumu: z.string().nullable(),
   watchStatus: watchStatusSchema,
+  region: z.string().default("kapiti"),
 });
 
 export const schoolEventSchema = z.object({

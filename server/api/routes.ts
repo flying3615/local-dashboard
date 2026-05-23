@@ -8,6 +8,7 @@ import { createMockSchoolAdapter } from "../adapters/mockSchools";
 import { searchKapitiPropertyRecords } from "../adapters/kapitiPropertyRecords";
 import type { KapitiPropertyRecord } from "../adapters/kapitiPropertyRecords";
 import { configuredPropertySearchLinks } from "../adapters/propertySearchLinks";
+import { allRegions, defaultRegion } from "../config/regions";
 import type { createRepositories } from "../db/repositories";
 import { refreshAll } from "../jobs/refreshAll";
 
@@ -30,8 +31,17 @@ export function createApiRoutes(
   const searchPropertyRecords =
     options.searchPropertyRecords ?? searchKapitiPropertyRecords;
 
-  router.get("/dashboard", (_req: Request, res: Response) => {
-    const items = repositories.items.list();
+  router.get("/regions", (_req: Request, res: Response) => {
+    res.json(allRegions().map((r) => ({
+      id: r.id,
+      name: r.name,
+      council: r.council,
+    })));
+  });
+
+  router.get("/dashboard", (req: Request, res: Response) => {
+    const region = String(req.query.region ?? defaultRegion().id);
+    const items = repositories.items.list({ region });
 
     const sections = {
       new_listings: items.filter(
@@ -68,11 +78,13 @@ export function createApiRoutes(
     });
   });
 
-  router.get("/properties", (_req: Request, res: Response) => {
+  router.get("/properties", (req: Request, res: Response) => {
+    const region = String(req.query.region ?? defaultRegion().id);
     const propertyItems = repositories.items.list({
       type: "property_listing",
+      region,
     });
-    const properties = repositories.properties.list();
+    const properties = repositories.properties.list(region);
     const sources = repositories.sources.list();
 
     const result = propertyItems.map((item) => {
@@ -103,8 +115,9 @@ export function createApiRoutes(
     res.json({ item, property: property ?? null, source, links, notes });
   });
 
-  router.get("/property-search-links", (_req: Request, res: Response) => {
-    res.json(configuredPropertySearchLinks());
+  router.get("/property-search-links", (req: Request, res: Response) => {
+    const region = String(req.query.region ?? defaultRegion().id);
+    res.json(configuredPropertySearchLinks(region));
   });
 
   router.get("/property-records/search", async (req: Request, res: Response) => {
@@ -124,8 +137,9 @@ export function createApiRoutes(
     }
   });
 
-  router.get("/schools", (_req: Request, res: Response) => {
-    const schools = repositories.schools.list();
+  router.get("/schools", (req: Request, res: Response) => {
+    const region = String(req.query.region ?? defaultRegion().id);
+    const schools = repositories.schools.list(region);
 
     const result = schools.map((school) => {
       const events = repositories.schoolEvents.listBySchool(school.id);

@@ -23,6 +23,7 @@ function makeProperty(overrides = {}) {
       tags: ["paraparaumu"],
       rawSnapshotId: null,
       lastSeenAt: null,
+      region: "kapiti",
     },
     property: {
       id: "property_1",
@@ -57,6 +58,7 @@ function makeProperty(overrides = {}) {
       legalDescription: null,
       certificateOfTitle: null,
       imageUrl: null,
+      region: "kapiti",
     },
     source: {
       id: "source_1",
@@ -189,5 +191,37 @@ describe("PropertyList", () => {
     expect(screen.getByText("545 State Highway 1, Paraparaumu")).toBeInTheDocument();
     expect(screen.getByText("$590,000")).toBeInTheDocument();
     expect(screen.getByText("1.7585 ha")).toBeInTheDocument();
+  });
+
+  it("uses custom council name in records table", () => {
+    const officialRecords: KapitiPropertyRecord[] = [
+      {
+        id: "wcc_property_1",
+        valuationId: null,
+        propertyNumber: null,
+        address: "10 Lambton Quay, Wellington",
+        legalDescription: null,
+        landValue: null,
+        capitalValue: null,
+        improvementsValue: null,
+        hectares: null,
+        valuationDate: null,
+        latitude: null,
+        longitude: null,
+        sourceUrl: "https://example.com",
+      },
+    ];
+
+    render(
+      <PropertyList
+        properties={[]}
+        allProperties={[]}
+        {...defaultProps}
+        officialRecords={officialRecords}
+        councilName="Wellington City Council"
+      />,
+    );
+
+    expect(screen.getByText(/Wellington City Council Records/)).toBeInTheDocument();
   });
 });

@@ -1,3 +1,5 @@
+import { getRegion } from "../config/regions";
+
 export interface PropertySearchLink {
   id: string;
   provider: string;
@@ -8,14 +10,17 @@ export interface PropertySearchLink {
   notes: string;
 }
 
-export function configuredPropertySearchLinks(): PropertySearchLink[] {
+export function configuredPropertySearchLinks(regionId: string = "kapiti"): PropertySearchLink[] {
+  const region = getRegion(regionId);
+  if (!region) return [];
+
   return [
     {
-      id: "realestate_paraparaumu_residential_sale",
+      id: `realestate_${region.id}_residential_sale`,
       provider: "realestate.co.nz",
-      label: "Paraparaumu homes for sale",
-      url: "https://www.realestate.co.nz/residential/sale/wellington/kapiti-coast/paraparaumu",
-      area: "Paraparaumu",
+      label: `${region.name} homes for sale`,
+      url: `https://www.realestate.co.nz/residential/sale/${region.realestatePath}`,
+      area: region.name,
       category: "residential_sale",
       notes:
         "External search link only. realestate.co.nz listings are not scraped or stored without API permission.",

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { SourceAdapter } from "../adapters/types";
 import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
+import { getRegion } from "../config/regions";
 import type { Item, School, SchoolEvent, Source } from "../domain/types";
 import type { createRepositories } from "../db/repositories";
 import { linkItem } from "../pipeline/link";
@@ -284,10 +285,16 @@ function mergeExistingPropertyState(
 
 function tagSchoolEvent(item: Item): Item {
   const tags = new Set(item.tags);
+  const regionId = item.region ?? "kapiti";
   const locationText = [item.area, item.address].filter(Boolean).join(" ");
 
-  if (/\bparaparaumu(?:\s+beach)?\b/i.test(locationText)) {
-    tags.add("paraparaumu");
+  // Add region tag if location matches the item's region
+  const region = getRegion(regionId);
+  if (region) {
+    const lower = locationText.toLowerCase();
+    if (region.suburbs.some((suburb) => lower.includes(suburb.toLowerCase()))) {
+      tags.add(regionId);
+    }
   }
 
   return {
@@ -313,6 +320,7 @@ function createSchoolFromEventRecord(record: unknown, item: Item): School {
     area: item.area ?? "Greater Wellington",
     commuteFromParaparaumu: getString(raw, "commuteFromParaparaumu"),
     watchStatus: "new",
+    region: item.region ?? "kapiti",
   };
 }
 
@@ -334,6 +342,7 @@ function createSchoolFromProfileRecord(record: unknown, item: Item): School {
     area: item.area ?? "Wellington Region",
     commuteFromParaparaumu: getString(raw, "commuteFromParaparaumu"),
     watchStatus: "new",
+    region: item.region ?? "kapiti",
   };
 }
 
@@ -417,6 +426,7 @@ function normalizeSchoolProfile(
     tags: getStringArray(raw, "tags"),
     rawSnapshotId,
     lastSeenAt: null,
+    region: "kapiti",
   };
 }
 
@@ -446,6 +456,7 @@ function normalizeCouncilNotice(
     tags: getStringArray(raw, "tags"),
     rawSnapshotId,
     lastSeenAt: null,
+    region: "kapiti",
   };
 }
 
@@ -483,6 +494,7 @@ function normalizeSchoolEvent(
     tags,
     rawSnapshotId,
     lastSeenAt: null,
+    region: "kapiti",
   };
 }
 

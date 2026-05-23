@@ -77,24 +77,33 @@ export interface RefreshResult {
   error?: string;
 }
 
-export function getDashboard(): Promise<DashboardResponse> {
-  return request<DashboardResponse>("/dashboard");
+export interface RegionInfo {
+  id: string;
+  name: string;
+  council: string;
 }
 
-export function getProperties(): Promise<PropertyWithItem[]> {
-  return request<PropertyWithItem[]>("/properties");
+export function getRegions(): Promise<RegionInfo[]> {
+  return request<RegionInfo[]>("/regions");
 }
 
-export function getPropertySearchLinks(): Promise<PropertySearchLink[]> {
-  return request<PropertySearchLink[]>("/property-search-links");
+export function getProperties(region?: string): Promise<PropertyWithItem[]> {
+  const params = region ? `?region=${encodeURIComponent(region)}` : "";
+  return request<PropertyWithItem[]>(`/properties${params}`);
+}
+
+export function getPropertySearchLinks(region?: string): Promise<PropertySearchLink[]> {
+  const params = region ? `?region=${encodeURIComponent(region)}` : "";
+  return request<PropertySearchLink[]>(`/property-search-links${params}`);
 }
 
 export function getProperty(id: string): Promise<PropertyDetail> {
   return request<PropertyDetail>(`/properties/${encodeURIComponent(id)}`);
 }
 
-export function getSchools(): Promise<SchoolWithEvents[]> {
-  return request<SchoolWithEvents[]>("/schools");
+export function getSchools(region?: string): Promise<SchoolWithEvents[]> {
+  const params = region ? `?region=${encodeURIComponent(region)}` : "";
+  return request<SchoolWithEvents[]>(`/schools${params}`);
 }
 
 export function getSources(): Promise<Source[]> {

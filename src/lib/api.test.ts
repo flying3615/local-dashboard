@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  getDashboard,
+  getRegions,
   getProperties,
   getProperty,
   getSchools,
@@ -22,22 +22,15 @@ describe("API client", () => {
     );
   };
 
-  it("getDashboard fetches and parses dashboard response", async () => {
-    const mockResponse = {
-      sections: {
-        new_listings: [],
-        upcoming_open_homes: [],
-        school_events: [],
-        local_updates: [],
-        needs_review: [],
-        recent_activity: [],
-      },
-      totalItems: 0,
-    };
-    mockFetch(mockResponse);
+  it("getRegions fetches and parses regions list", async () => {
+    const mockRegions = [
+      { id: "kapiti", name: "Kapiti Coast", council: "Kapiti Coast District Council" },
+      { id: "wellington", name: "Wellington City", council: "Wellington City Council" },
+    ];
+    mockFetch(mockRegions);
 
-    const result = await getDashboard();
-    expect(result).toEqual(mockResponse);
+    const result = await getRegions();
+    expect(result).toEqual(mockRegions);
   });
 
   it("getProperties fetches and parses property list", async () => {

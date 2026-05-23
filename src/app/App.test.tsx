@@ -4,9 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 
-function mockApiResponses(properties = [], sources = [], schools = [], searchLinks = []) {
+function mockApiResponses(properties = [], sources = [], schools = [], searchLinks = [], regions = [{ id: "kapiti", name: "Kapiti Coast", council: "Kapiti Coast District Council" }]) {
   vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
     const url = String(input);
+    if (url.includes("/api/regions")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(regions), { status: 200 }),
+      );
+    }
     if (url.includes("/api/sources")) {
       return Promise.resolve(
         new Response(JSON.stringify(sources), { status: 200 }),
@@ -42,7 +47,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: /Paraparaumu Property Dashboard/i }),
+      screen.getByRole("heading", { name: /Property Dashboard/i }),
     ).toBeInTheDocument();
   });
 
@@ -74,7 +79,6 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByRole("button", { name: "Properties" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Analytics" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Schools" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sources" })).toBeInTheDocument();
   });
@@ -111,5 +115,20 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("sources-view")).toBeInTheDocument();
     });
+  });
+
+  it("renders region selector with regions", async () => {
+    mockApiResponses([], [], [], [], [
+      { id: "kapiti", name: "Kapiti Coast", council: "Kapiti Coast District Council" },
+      { id: "wellington", name: "Wellington City", council: "Wellington City Council" },
+    ]);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Select region")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Kapiti Coast")).toBeInTheDocument();
+    expect(screen.getByText("Wellington City")).toBeInTheDocument();
   });
 });

@@ -71,7 +71,7 @@ describe("normalization pipeline", () => {
       watchStatus: "new",
     });
     expect(tagged.tags).toEqual(
-      expect.arrayContaining(["paraparaumu", "open_home_soon"]),
+      expect.arrayContaining(["kapiti", "open_home_soon"]),
     );
     expect(tagged.tags).not.toContain("needs_manual_address_check");
     expect(deduped).toEqual([tagged]);
@@ -124,12 +124,12 @@ describe("normalization pipeline", () => {
     );
 
     expect(tagItem(missingAddress.item).tags).toEqual(
-      expect.arrayContaining(["paraparaumu", "needs_manual_address_check"]),
+      expect.arrayContaining(["kapiti", "needs_manual_address_check"]),
     );
     expect(tagItem(unclearArea.item).tags).toContain(
       "needs_manual_address_check",
     );
     expect(areaFallback.item.area).toBe("Paraparaumu");
-    expect(tagItem(areaFallback.item).tags).toContain("paraparaumu");
+    expect(tagItem(areaFallback.item).tags).toContain("kapiti");
   });
 });

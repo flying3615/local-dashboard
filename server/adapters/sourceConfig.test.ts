@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { allConfiguredAdapters, activeAdapters, mockAdapters } from "./sourceConfig";
 
 describe("sourceConfig", () => {
-  it("includes Trade Me, realestate.co.nz, homes.co.nz, Education Counts, and Kapiti Council", () => {
+  it("includes all configured adapters", () => {
     const configured = allConfiguredAdapters();
 
     expect(configured).toEqual(
@@ -38,6 +38,18 @@ describe("sourceConfig", () => {
           }),
           status: "active",
         }),
+        expect.objectContaining({
+          adapter: expect.objectContaining({
+            sourceId: "wellington_council",
+          }),
+          status: "active",
+        }),
+        expect.objectContaining({
+          adapter: expect.objectContaining({
+            sourceId: "porirua_council",
+          }),
+          status: "active",
+        }),
       ]),
     );
   });
@@ -48,7 +60,9 @@ describe("sourceConfig", () => {
       "education_counts",
       "homes_co_nz",
       "kapiti_council",
+      "porirua_council",
       "realestate_co_nz",
+      "wellington_council",
     ]);
   });
 

@@ -36,6 +36,7 @@ export interface RawPropertyListing {
   legalDescription?: string | null;
   certificateOfTitle?: string | null;
   imageUrl?: string | null;
+  region?: string | null;
 }
 
 export interface NormalizeContext {
@@ -80,6 +81,7 @@ export function normalizePropertyListing(
       tags: initialTags,
       rawSnapshotId: raw.rawSnapshotId ?? null,
       lastSeenAt: null,
+      region: raw.region ?? "kapiti",
     },
     property: {
       id: `property_${stableHash(itemId)}`,
@@ -114,6 +116,7 @@ export function normalizePropertyListing(
       legalDescription: raw.legalDescription ?? null,
       certificateOfTitle: raw.certificateOfTitle ?? null,
       imageUrl: raw.imageUrl ?? null,
+      region: raw.region ?? "kapiti",
     },
   };
 }

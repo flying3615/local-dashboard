@@ -1,5 +1,6 @@
 import { searchKapitiPropertyRecords } from "../server/adapters/kapitiPropertyRecords";
 import { configuredPropertySearchLinks } from "../server/adapters/propertySearchLinks";
+import { allRegions, defaultRegion } from "../server/config/regions";
 
 interface Env {
   ASSETS: Fetcher;
@@ -21,6 +22,7 @@ type ItemRow = {
   status: string;
   tags: string;
   raw_snapshot_id: string | null;
+  region: string;
 };
 
 type PropertyRow = {
@@ -56,6 +58,7 @@ type PropertyRow = {
   legal_description: string | null;
   certificate_of_title: string | null;
   image_url: string | null;
+  region: string;
 };
 
 type SourceRow = {
@@ -82,6 +85,7 @@ type SchoolRow = {
   area: string;
   commute_from_paraparaumu: string | null;
   watch_status: string;
+  region: string;
 };
 
 type SchoolEventRow = {
@@ -139,12 +143,22 @@ async function routeApi(
   env: Env,
   url: URL,
 ): Promise<Response> {
+  if (request.method === "GET" && url.pathname === "/api/regions") {
+    return json(allRegions().map((r) => ({
+      id: r.id,
+      name: r.name,
+      council: r.council,
+    })));
+  }
+
   if (request.method === "GET" && url.pathname === "/api/dashboard") {
-    return json(await getDashboard(env.DB));
+    const region = url.searchParams.get("region") ?? defaultRegion().id;
+    return json(await getDashboard(env.DB, region));
   }
 
   if (request.method === "GET" && url.pathname === "/api/properties") {
-    return json(await getProperties(env.DB));
+    const region = url.searchParams.get("region") ?? defaultRegion().id;
+    return json(await getProperties(env.DB, region));
   }
 
   const propertyMatch = url.pathname.match(/^\/api\/properties\/([^/]+)$/);
@@ -153,7 +167,8 @@ async function routeApi(
   }
 
   if (request.method === "GET" && url.pathname === "/api/property-search-links") {
-    return json(configuredPropertySearchLinks());
+    const region = url.searchParams.get("region") ?? defaultRegion().id;
+    return json(configuredPropertySearchLinks(region));
   }
 
   if (request.method === "GET" && url.pathname === "/api/property-records/search") {
@@ -166,7 +181,8 @@ async function routeApi(
   }
 
   if (request.method === "GET" && url.pathname === "/api/schools") {
-    return json(await getSchools(env.DB));
+    const region = url.searchParams.get("region") ?? defaultRegion().id;
+    return json(await getSchools(env.DB, region));
   }
 
   if (request.method === "GET" && url.pathname === "/api/sources") {
@@ -186,8 +202,8 @@ async function routeApi(
   return json({ error: "Not found" }, 404);
 }
 
-async function getDashboard(db: D1Database) {
-  const items = await listItems(db);
+async function getDashboard(db: D1Database, region: string) {
+  const items = await listItems(db, undefined, region);
   const localTypes = new Set([
     "council_notice",
     "local_news",
@@ -219,10 +235,10 @@ async function getDashboard(db: D1Database) {
   };
 }
 
-async function getProperties(db: D1Database) {
+async function getProperties(db: D1Database, region: string) {
   const [items, properties, sources] = await Promise.all([
-    listItems(db, "property_listing"),
-    listProperties(db),
+    listItems(db, "property_listing", region),
+    listProperties(db, region),
     getSources(db),
   ]);
 
@@ -257,9 +273,9 @@ async function getProperty(db: D1Database, id: string): Promise<Response> {
   });
 }
 
-async function getSchools(db: D1Database) {
+async function getSchools(db: D1Database, region: string) {
   const [schools, events, notes] = await Promise.all([
-    all<SchoolRow>(db, "SELECT * FROM schools ORDER BY name"),
+    all<SchoolRow>(db, "SELECT * FROM schools WHERE region = ? ORDER BY name", [region]),
     all<SchoolEventRow>(db, "SELECT * FROM school_events ORDER BY id"),
     all<NoteRow>(
       db,
@@ -282,21 +298,28 @@ async function getSchools(db: D1Database) {
   });
 }
 
-async function listItems(db: D1Database, type?: string) {
-  const rows =
-    type === undefined
-      ? await all<ItemRow>(db, "SELECT * FROM items ORDER BY id")
-      : await all<ItemRow>(db, "SELECT * FROM items WHERE type = ? ORDER BY id", [
-          type,
-        ]);
+async function listItems(db: D1Database, type?: string, region?: string) {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (type !== undefined) {
+    conditions.push("type = ?");
+    params.push(type);
+  }
+  if (region !== undefined) {
+    conditions.push("region = ?");
+    params.push(region);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const rows = await all<ItemRow>(db, `SELECT * FROM items ${where} ORDER BY id`, params);
   return rows.map(mapItemRow);
 }
 
-async function listProperties(db: D1Database) {
-  const rows = await all<PropertyRow>(
-    db,
-    "SELECT * FROM property_listings ORDER BY id",
-  );
+async function listProperties(db: D1Database, region?: string) {
+  const rows = region
+    ? await all<PropertyRow>(db, "SELECT * FROM property_listings WHERE region = ? ORDER BY id", [region])
+    : await all<PropertyRow>(db, "SELECT * FROM property_listings ORDER BY id");
   return rows.map(mapPropertyRow);
 }
 
@@ -354,6 +377,7 @@ function mapItemRow(row: ItemRow) {
     status: row.status,
     tags: parseJsonArray(row.tags),
     rawSnapshotId: row.raw_snapshot_id,
+    region: row.region,
   };
 }
 
@@ -391,6 +415,7 @@ function mapPropertyRow(row: PropertyRow) {
     legalDescription: row.legal_description,
     certificateOfTitle: row.certificate_of_title,
     imageUrl: row.image_url,
+    region: row.region,
   };
 }
 
@@ -421,6 +446,7 @@ function mapSchoolRow(row: SchoolRow) {
     area: row.area,
     commuteFromParaparaumu: row.commute_from_paraparaumu,
     watchStatus: row.watch_status,
+    region: row.region,
   };
 }
 

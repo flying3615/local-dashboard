@@ -1492,3 +1492,30 @@ section.band-section {
     padding: var(--space-2) var(--space-2);
   }
 }
+/* Region selector - add to styles.css after .nav-links or within .nav styles */
+.region-selector {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 28px 6px 10px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  margin-right: var(--space-3);
+}
+
+.region-selector:hover {
+  border-color: var(--accent);
+}
+
+.region-selector:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}

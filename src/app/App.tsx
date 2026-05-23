@@ -1,57 +1,58 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import type {
-  KapitiPropertyRecord,
-  PropertyDetail as PropertyDetailType,
-  PropertySearchLink,
-  PropertyWithItem,
-  SchoolWithEvents,
-} from "../lib/api";
-import {
-  getProperties,
-  getPropertySearchLinks,
-  getProperty,
-  getSchools,
-  getSources,
-  searchPropertyRecords,
-} from "../lib/api";
-import type { Source } from "../lib/types";
-import { parsePrice, median } from "../lib/analysis";
-import { PropertyAnalytics } from "./PropertyAnalytics";
-import { PropertyDetail } from "./PropertyDetail";
 import { PropertyList } from "./PropertyList";
+import { PropertyDetail } from "./PropertyDetail";
 import { SchoolRadar } from "./SchoolRadar";
 import { Sources } from "./Sources";
+import {
+  getProperties,
+  getProperty,
+  getPropertySearchLinks,
+  getSchools,
+  getSources,
+  getRegions,
+  searchPropertyRecords,
+  type PropertyWithItem,
+  type PropertyDetail as PropertyDetailType,
+  type PropertySearchLink,
+  type KapitiPropertyRecord,
+  type SchoolWithEvents,
+  type RegionInfo,
+} from "../lib/api";
+import type { Source } from "../lib/types";
 
 type Page = "main" | "schools" | "sources";
 
 export function App() {
   const [page, setPage] = useState<Page>("main");
-  const [sources, setSources] = useState<Source[]>([]);
+  const [regions, setRegions] = useState<RegionInfo[]>([]);
+  const [region, setRegion] = useState<string>("kapiti");
   const [properties, setProperties] = useState<PropertyWithItem[]>([]);
-  const [propertySearchLinks, setPropertySearchLinks] = useState<PropertySearchLink[]>([]);
-  const [officialPropertyRecords, setOfficialPropertyRecords] = useState<KapitiPropertyRecord[]>([]);
+  const [searchLinks, setSearchLinks] = useState<PropertySearchLink[]>([]);
   const [schools, setSchools] = useState<SchoolWithEvents[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
+  const [officialRecords, setOfficialRecords] = useState<KapitiPropertyRecord[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
-  const [propertyDetail, setPropertyDetail] = useState<PropertyDetailType | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<PropertyDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [suburbFilter, setSuburbFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const propertiesRef = useRef<HTMLElement>(null);
-  const analyticsRef = useRef<HTMLElement>(null);
-
-  const loadInitial = useCallback(async () => {
+  const loadData = useCallback(async (regionId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const [props, links, srcs] = await Promise.all([
-        getProperties(),
-        getPropertySearchLinks(),
+      const [props, links, sch, src] = await Promise.all([
+        getProperties(regionId),
+        getPropertySearchLinks(regionId),
+        getSchools(regionId),
         getSources(),
       ]);
       setProperties(props);
-      setPropertySearchLinks(links);
-      setSources(srcs);
+      setSearchLinks(links);
+      setSchools(sch);
+      setSources(src);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -59,136 +60,105 @@ export function App() {
     }
   }, []);
 
-  const loadSchools = useCallback(async () => {
-    try {
-      const schs = await getSchools();
-      setSchools(schs);
-    } catch {
-      // keep stale data
-    }
-  }, []);
+  useEffect(() => {
+    getRegions().then(setRegions).catch(() => {});
+    loadData(region);
+  }, [loadData, region]);
 
-  const loadPropertyDetail = useCallback(async (id: string) => {
-    try {
-      const detail = await getProperty(id);
-      setPropertyDetail(detail);
-      setSelectedPropertyId(id);
-    } catch {
-      // keep stale data
+  useEffect(() => {
+    if (!selectedPropertyId) {
+      setSelectedDetail(null);
+      return;
     }
-  }, []);
+    getProperty(selectedPropertyId).then(setSelectedDetail).catch(() => {});
+  }, [selectedPropertyId]);
 
   const handleSearchOfficialRecords = useCallback(async (query: string) => {
-    setOfficialPropertyRecords(await searchPropertyRecords(query));
+    const records = await searchPropertyRecords(query);
+    setOfficialRecords(records);
   }, []);
 
-  useEffect(() => {
-    loadInitial();
-  }, [loadInitial]);
-
-  useEffect(() => {
-    if (page === "schools" && schools.length === 0) {
-      loadSchools();
-    }
-  }, [page, schools.length, loadSchools]);
-
-  const scrollTo = (ref: React.RefObject<HTMLElement | null>) => {
-    ref.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleNavClick = (target: Page | "properties" | "analytics") => {
-    if (target === "schools" || target === "sources") {
-      setPage(target);
-      setSelectedPropertyId(null);
-      setPropertyDetail(null);
-      window.scrollTo({ top: 0 });
-    } else if (target === "properties") {
-      setPage("main");
-      setTimeout(() => scrollTo(propertiesRef), 50);
-    } else if (target === "analytics") {
-      setPage("main");
-      setTimeout(() => scrollTo(analyticsRef), 50);
-    }
-  };
-
-  const handleCloseModal = useCallback(() => {
+  const handleRegionChange = (newRegion: string) => {
+    setRegion(newRegion);
+    setSuburbFilter("all");
+    setSearchQuery("");
+    setOfficialRecords([]);
     setSelectedPropertyId(null);
-    setPropertyDetail(null);
-    loadInitial();
-  }, [loadInitial]);
+  };
 
-  // Compute hero stats
-  const heroStats = useMemo(() => {
-    const prices = properties
-      .map((p) => (p.property ? parsePrice(p.property.price) : null))
-      .filter((p): p is number => p != null);
-    const suburbs = new Set(
-      properties.map((p) => p.property?.suburb ?? p.item.area ?? "Unknown"),
-    );
-    return {
-      total: properties.length,
-      medianPrice: median(prices),
-      suburbCount: suburbs.size,
-    };
-  }, [properties]);
+  const currentRegion = regions.find((r) => r.id === region);
 
-  // Suburb filter state
-  const [suburbFilter, setSuburbFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const suburbs = [...new Set(
+    properties.map((p) => p.property?.suburb ?? p.item.area ?? "Unknown"),
+  )].sort();
 
-  const suburbs = useMemo(() => {
-    const set = new Set(
-      properties.map((p) => p.property?.suburb ?? p.item.area ?? "Unknown"),
-    );
-    return [...set].sort();
-  }, [properties]);
+  const filteredProperties = properties.filter((p) => {
+    const matchesSuburb =
+      suburbFilter === "all" ||
+      (p.property?.suburb ?? p.item.area ?? "Unknown") === suburbFilter;
+    const matchesSearch =
+      !searchQuery ||
+      (p.property?.address ?? p.item.address ?? p.item.title ?? "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+    return matchesSuburb && matchesSearch;
+  });
 
-  const filteredProperties = useMemo(() => {
-    let result = properties;
-    if (suburbFilter !== "all") {
-      result = result.filter(
-        (p) => (p.property?.suburb ?? p.item.area ?? "Unknown") === suburbFilter,
-      );
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((p) => {
-        const addr = (p.property?.address ?? p.item.address ?? p.item.title ?? "").toLowerCase();
-        return addr.includes(q);
-      });
-    }
-    return result;
-  }, [properties, suburbFilter, searchQuery]);
+  const totalListings = properties.length;
+  const prices = properties
+    .map((p) => {
+      const priceStr = p.property?.price;
+      if (!priceStr) return null;
+      const num = parseInt(priceStr.replace(/[^0-9]/g, ""), 10);
+      return Number.isFinite(num) && num > 0 ? num : null;
+    })
+    .filter((p): p is number => p !== null)
+    .sort((a, b) => a - b);
+  const medianPrice = prices.length > 0 ? prices[Math.floor(prices.length / 2)] : null;
 
   return (
-    <>
+    <div className="app">
       <nav className="nav">
         <div className="nav-inner">
-          <span className="nav-brand" onClick={() => handleNavClick("properties")}>
-            Paraparaumu
-          </span>
+          <div className="nav-brand">
+            <span className="brand-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="20" height="20">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </span>
+            <span className="brand-text">{currentRegion?.name ?? "Wellington"} Properties</span>
+          </div>
           <div className="nav-links">
+            {regions.length > 0 && (
+              <select
+                className="region-selector"
+                value={region}
+                onChange={(e) => handleRegionChange(e.target.value)}
+                aria-label="Select region"
+              >
+                {regions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
-              className={page === "main" ? "active" : ""}
-              onClick={() => handleNavClick("properties")}
+              className={`nav-link ${page === "main" ? "active" : ""}`}
+              onClick={() => setPage("main")}
             >
               Properties
             </button>
             <button
-              className={page === "main" ? "active" : ""}
-              onClick={() => handleNavClick("analytics")}
-            >
-              Analytics
-            </button>
-            <button
-              className={page === "schools" ? "active" : ""}
-              onClick={() => handleNavClick("schools")}
+              className={`nav-link ${page === "schools" ? "active" : ""}`}
+              onClick={() => setPage("schools")}
             >
               Schools
             </button>
             <button
-              className={page === "sources" ? "active" : ""}
-              onClick={() => handleNavClick("sources")}
+              className={`nav-link ${page === "sources" ? "active" : ""}`}
+              onClick={() => setPage("sources")}
             >
               Sources
             </button>
@@ -196,141 +166,113 @@ export function App() {
         </div>
       </nav>
 
-      {page === "main" && (
-        <>
-          {/* Hero */}
-          <section className="hero">
-            <div className="hero-content">
-              <h1>Paraparaumu Property Dashboard</h1>
-              <p className="hero-subtitle">
-                Track listings, analyse market trends, and find the right property on the Kapiti Coast.
-              </p>
-              <div className="hero-tags">
-                {suburbs.slice(0, 6).map((s) => (
-                  <button
-                    key={s}
-                    className={`hero-tag ${suburbFilter === s ? "active" : ""}`}
-                    onClick={() => {
-                      setPage("main");
-                      setSuburbFilter(s);
-                      setTimeout(() => scrollTo(propertiesRef), 50);
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="hero-stats">
-                <div>
-                  <div className="hero-stat-value">{heroStats.total}</div>
-                  <div className="hero-stat-label">Active Listings</div>
-                </div>
-                {heroStats.medianPrice != null && (
-                  <div>
-                    <div className="hero-stat-value">${heroStats.medianPrice.toLocaleString()}</div>
-                    <div className="hero-stat-label">Median Price</div>
-                  </div>
-                )}
-                <div>
-                  <div className="hero-stat-value">{heroStats.suburbCount}</div>
-                  <div className="hero-stat-label">Suburbs</div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {loading && (
-            <section className="property-section">
+      <main className="main">
+        {page === "main" && (
+          <>
+            <section className="hero">
               <div className="container">
-                <p className="status-message">Loading...</p>
-              </div>
-            </section>
-          )}
-
-          {error && (
-            <section className="property-section">
-              <div className="container">
-                <p className="status-message error-message">
-                  {error}
-                  <button onClick={loadInitial} className="retry-button">Retry</button>
+                <h1 className="hero-title">
+                  {currentRegion?.name ?? "Wellington"} Property Dashboard
+                </h1>
+                <p className="hero-subtitle">
+                  Monitor property listings across {currentRegion?.name ?? "the region"}
                 </p>
+                <div className="hero-stats">
+                  <div className="stat">
+                    <span className="stat-value">{totalListings}</span>
+                    <span className="stat-label">Active Listings</span>
+                  </div>
+                  {medianPrice && (
+                    <div className="stat">
+                      <span className="stat-value">
+                        ${(medianPrice / 1000).toFixed(0)}k
+                      </span>
+                      <span className="stat-label">Median Price</span>
+                    </div>
+                  )}
+                  <div className="stat">
+                    <span className="stat-value">{suburbs.length}</span>
+                    <span className="stat-label">Suburbs</span>
+                  </div>
+                </div>
               </div>
             </section>
-          )}
 
-          {!loading && !error && (
-            <>
-              {/* Properties */}
-              <section className="property-section" ref={propertiesRef}>
-                <div className="container">
-                  <h2>Properties</h2>
-                  <PropertyList
-                    properties={filteredProperties}
-                    allProperties={properties}
-                    searchLinks={propertySearchLinks}
-                    officialRecords={officialPropertyRecords}
-                    onSearchOfficialRecords={handleSearchOfficialRecords}
-                    onSelectProperty={loadPropertyDetail}
-                    suburbFilter={suburbFilter}
-                    onSuburbFilterChange={setSuburbFilter}
-                    searchQuery={searchQuery}
-                    onSearchQueryChange={setSearchQuery}
-                    suburbs={suburbs}
-                  />
+            <div className="container">
+              {loading && <p className="loading-state">Loading...</p>}
+              {error && (
+                <div className="error-state">
+                  <p>{error}</p>
+                  <button onClick={() => loadData(region)}>Retry</button>
                 </div>
-              </section>
+              )}
+              {!loading && !error && (
+                <PropertyList
+                  properties={filteredProperties}
+                  allProperties={properties}
+                  searchLinks={searchLinks}
+                  officialRecords={officialRecords}
+                  onSearchOfficialRecords={handleSearchOfficialRecords}
+                  onSelectProperty={setSelectedPropertyId}
+                  suburbFilter={suburbFilter}
+                  onSuburbFilterChange={setSuburbFilter}
+                  searchQuery={searchQuery}
+                  onSearchQueryChange={setSearchQuery}
+                  suburbs={suburbs}
+                />
+              )}
+            </div>
+          </>
+        )}
 
-              {/* Analytics */}
-              <section className="analytics-section-wrapper" ref={analyticsRef}>
-                <div className="container">
-                  <h2>Analytics</h2>
-                  <PropertyAnalytics properties={properties} />
-                </div>
-              </section>
-            </>
-          )}
-        </>
-      )}
+        {page === "schools" && (
+          <div className="container">
+            <SchoolRadar schools={schools} />
+          </div>
+        )}
 
-      {page === "schools" && <SchoolRadar schools={schools} />}
-      {page === "sources" && <Sources sources={sources} />}
+        {page === "sources" && (
+          <div className="container">
+            <Sources sources={sources} />
+          </div>
+        )}
+      </main>
 
-      {/* Property Detail Modal */}
-      {selectedPropertyId && propertyDetail && (
+      {selectedDetail && (
         <div
           className="modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleCloseModal();
-          }}
+          onClick={() => setSelectedPropertyId(null)}
           onKeyDown={(e) => {
-            if (e.key === "Escape") handleCloseModal();
+            if (e.key === "Escape") setSelectedPropertyId(null);
           }}
           role="dialog"
           aria-modal="true"
           tabIndex={-1}
         >
-          <div className="modal">
-            <div className="modal-header">
-              <span className="modal-title">{propertyDetail.item.title}</span>
-              <button className="modal-close" onClick={handleCloseModal} aria-label="Close">
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <PropertyDetail detail={propertyDetail} />
-            </div>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              onClick={() => setSelectedPropertyId(null)}
+              aria-label="Close"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <PropertyDetail detail={selectedDetail} />
           </div>
         </div>
       )}
 
-      <footer className="app-footer">
-        <div className="footer-inner">
-          <div className="footer-bottom">
-            <span>Paraparaumu Dashboard</span>
-            <span>Last refreshed: {new Date().toLocaleDateString("en-NZ")}</span>
-          </div>
+      <footer className="footer">
+        <div className="container">
+          <p>{currentRegion?.name ?? "Wellington"} Property Dashboard</p>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

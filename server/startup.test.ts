@@ -17,7 +17,9 @@ describe("startup", () => {
       "education_counts",
       "homes_co_nz",
       "kapiti_council",
+      "porirua_council",
       "realestate_co_nz",
+      "wellington_council",
     ]);
   });
 
@@ -34,6 +36,8 @@ describe("startup", () => {
       "realestate_co_nz",
       "education_counts",
       "kapiti_council",
+      "wellington_council",
+      "porirua_council",
     ]);
   });
 

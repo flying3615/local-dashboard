@@ -64,7 +64,7 @@ describe("refreshAll", () => {
       title: "42 Raumati Road",
       sourceId: "mock_properties",
       rawSnapshotId: propertySnapshots[0]?.id,
-      tags: expect.arrayContaining(["paraparaumu", "open_home_soon"]),
+      tags: expect.arrayContaining(["kapiti", "open_home_soon"]),
     });
 
     const properties = repos.properties.list();
@@ -84,7 +84,7 @@ describe("refreshAll", () => {
         title: "Paraparaumu College open day",
         sourceId: "mock_schools",
         rawSnapshotId: schoolSnapshots[0]?.id,
-        tags: expect.arrayContaining(["paraparaumu", "school"]),
+        tags: expect.arrayContaining(["kapiti", "school"]),
       }),
     ]);
     expect(repos.schools.list()).toEqual([

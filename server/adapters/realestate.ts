@@ -3,11 +3,11 @@ import { dirname } from "node:path";
 
 import type { SourceAdapter } from "./types";
 import type { RawPropertyListing } from "../pipeline/normalize";
+import type { RegionConfig } from "../config/regions";
 
 const PLATFORM_API = "https://platform.realestate.co.nz";
 const SITEMAP_URL = "https://www.realestate.co.nz/residential-sale-listings.xml";
 const LISTING_API = `${PLATFORM_API}/search/v1/listings`;
-const CACHE_PATH = "data/realestate-cache.json";
 
 interface ListingPhoto {
   "base-url"?: string;
@@ -77,30 +77,37 @@ export interface RealestateAdapterOptions {
   maxListingsPerFetch?: number;
   throttleMs?: number;
   now?: () => string;
+  region?: RegionConfig;
 }
 
 export function createRealestateAdapter(
   options: RealestateAdapterOptions = {},
 ): SourceAdapter {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const cacheStore = options.cacheStore ?? createFileCacheStore(CACHE_PATH);
+  const region = options.region;
+  const sourceId = region ? `realestate_co_nz_${region.id}` : "realestate_co_nz";
+  const cachePath = region ? `data/realestate-cache-${region.id}.json` : "data/realestate-cache.json";
+  const sitemapFilter = region?.realestateSitemapFilter ?? "paraparaumu";
+  const regionPath = region?.realestatePath ?? "wellington/kapiti-coast/paraparaumu";
+  const cacheStore = options.cacheStore ?? createFileCacheStore(cachePath);
   const maxListingsPerFetch = options.maxListingsPerFetch ?? 20;
   const throttleMs = options.throttleMs ?? 500;
   const now = options.now ?? (() => new Date().toISOString());
+  const regionId = region?.id ?? "kapiti";
 
   return {
-    sourceId: "realestate_co_nz",
+    sourceId,
     recordType: "property_listing",
     source: {
       name: "realestate.co.nz",
       type: "property_platform",
-      url: "https://www.realestate.co.nz/residential/sale/wellington/kapiti-coast/paraparaumu",
+      url: `https://www.realestate.co.nz/residential/sale/${regionPath}`,
       trustLevel: "platform",
       enabled: true,
       refreshIntervalMinutes: 360,
     },
     async fetch(): Promise<RawPropertyListing[]> {
-      const allListings = await discoverParaparaumuListings(fetchImpl);
+      const allListings = await discoverRegionListings(fetchImpl, sitemapFilter);
       const cache = await cacheStore.read();
       const changed = findChanged(allListings, cache);
       const pending = changed.slice(0, maxListingsPerFetch);
@@ -111,7 +118,7 @@ export function createRealestateAdapter(
       const successfullyProcessed: ListingUrl[] = [];
       for (const listing of pending) {
         try {
-          const result = await fetchListing(fetchImpl, listing.id, listing.url);
+          const result = await fetchListing(fetchImpl, listing.id, listing.url, sourceId, regionId);
           if (result) {
             results.push(result);
             successfullyProcessed.push(listing);
@@ -150,8 +157,9 @@ function findChanged(
   return changed;
 }
 
-async function discoverParaparaumuListings(
+async function discoverRegionListings(
   fetchImpl: FetchImpl,
+  sitemapFilter: string,
 ): Promise<ListingUrl[]> {
   const response = await fetchImpl(SITEMAP_URL, {
     headers: { "User-Agent": "paraparaumu-dashboard/0.1" },
@@ -165,8 +173,12 @@ async function discoverParaparaumuListings(
   const seen = new Set<string>();
   const urls: ListingUrl[] = [];
 
-  // parse sitemap <url> blocks containing 'paraparaumu'
-  const blockRegex = /<url>\s*<loc>(https:\/\/www\.realestate\.co\.nz\/(\d+)\/residential\/sale\/[^<]*paraparaumu[^<]*)<\/loc>\s*(?:<[^>]+>[^<]*<\/[^>]+>\s*)*<lastmod>([^<]+)<\/lastmod>/gi;
+  // parse sitemap <url> blocks matching the region filter
+  const escapedFilter = sitemapFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const blockRegex = new RegExp(
+    `<url>\\s*<loc>(https:\\/\\/www\\.realestate\\.co\\.nz\\/(\\d+)\\/residential\\/sale\\/[^<]*${escapedFilter}[^<]*)<\\/loc>\\s*(?:<[^>]+>[^<]*<\\/[^>]+>\\s*)*<lastmod>([^<]+)<\\/lastmod>`,
+    "gi",
+  );
   let match = blockRegex.exec(text);
   while (match !== null) {
     const fullUrl = match[1]!;
@@ -186,6 +198,8 @@ async function fetchListing(
   fetchImpl: FetchImpl,
   id: string,
   listingUrl: string,
+  sourceId: string,
+  regionId: string,
 ): Promise<RawPropertyListing | null> {
   const apiUrl = `${LISTING_API}/${id}?include=agents,offices`;
   const response = await fetchImpl(apiUrl, {
@@ -204,7 +218,7 @@ async function fetchListing(
 
   const address = attrs.address;
   const fullAddress = address?.["full-address"] ?? address?.["display-address"] ?? "Unknown address";
-  const suburb = address?.suburb ?? "Paraparaumu";
+  const suburb = address?.suburb ?? regionId;
   const openHomeTimes = (attrs["open-homes"] ?? [])
     .map((oh) => oh.start)
     .filter((s): s is string => s !== undefined);
@@ -217,7 +231,7 @@ async function fetchListing(
   return {
     address: fullAddress,
     title: fullAddress,
-    sourceId: "realestate_co_nz",
+    sourceId,
     sourceUrl: listingUrl,
     platform: "realestate.co.nz",
     suburb,
@@ -232,6 +246,7 @@ async function fetchListing(
     openHomeTimes,
     imageUrl,
     rawSnapshotId: null,
+    region: regionId,
   };
 }
 

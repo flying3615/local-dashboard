@@ -161,7 +161,7 @@ describe("API routes", () => {
     expect(body).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: "realestate_paraparaumu_residential_sale",
+          id: "realestate_kapiti_residential_sale",
           provider: "realestate.co.nz",
           url: expect.stringContaining(
             "/residential/sale/wellington/kapiti-coast/paraparaumu",

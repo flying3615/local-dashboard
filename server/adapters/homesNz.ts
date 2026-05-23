@@ -4,11 +4,10 @@ import { gunzipSync } from "node:zlib";
 
 import type { SourceAdapter } from "./types";
 import type { RawPropertyListing } from "../pipeline/normalize";
+import type { RegionConfig } from "../config/regions";
 
 const SITEMAP_BASE = "https://homes.co.nz/sitemapv2_properties";
 const SITEMAP_COUNT = 40;
-const SITEMAP_CACHE_PATH = "data/homes-nz-sitemap-cache.json";
-const PROPERTY_CACHE_PATH = "data/homes-nz-property-cache.json";
 
 type FetchResponse = {
   ok: boolean;
@@ -53,38 +52,49 @@ export interface HomesNzAdapterOptions {
   maxPropertiesPerFetch?: number;
   throttleMs?: number;
   now?: () => string;
+  region?: RegionConfig;
 }
 
 export function createHomesNzAdapter(
   options: HomesNzAdapterOptions = {},
 ): SourceAdapter {
   const fetchImpl = options.fetchImpl ?? (fetch as unknown as FetchImpl);
+  const region = options.region;
+  const sourceId = region ? `homes_co_nz_${region.id}` : "homes_co_nz";
+  const sitemapFilter = region?.homesNzSitemapFilter ?? "paraparaumu";
+  const regionPath = region?.homesNzPath ?? "wellington/kapiti-coast/paraparaumu";
+  const sitemapCachePath = region ? `data/homes-nz-sitemap-cache-${region.id}.json` : "data/homes-nz-sitemap-cache.json";
+  const propertyCachePath = region ? `data/homes-nz-property-cache-${region.id}.json` : "data/homes-nz-property-cache.json";
   const sitemapCacheStore =
     options.sitemapCacheStore ??
-    createFileCacheStore<SitemapCache>(SITEMAP_CACHE_PATH);
+    createFileCacheStore<SitemapCache>(sitemapCachePath);
   const propertyCacheStore =
     options.propertyCacheStore ??
-    createFileCacheStore<PropertyCache>(PROPERTY_CACHE_PATH);
+    createFileCacheStore<PropertyCache>(propertyCachePath);
   const maxPropertiesPerFetch = options.maxPropertiesPerFetch ?? 20;
   const throttleMs = options.throttleMs ?? 500;
   const now = options.now ?? (() => new Date().toISOString());
+  const regionId = region?.id ?? "kapiti";
 
   return {
-    sourceId: "homes_co_nz",
+    sourceId,
     recordType: "property_listing",
     source: {
       name: "homes.co.nz",
       type: "property_data",
-      url: "https://homes.co.nz/map/wellington/kapiti-coast/paraparaumu",
+      url: `https://homes.co.nz/map/${regionPath}`,
       trustLevel: "platform",
       enabled: true,
       refreshIntervalMinutes: 1440,
     },
     async fetch(): Promise<RawPropertyListing[]> {
-      const allProperties = await discoverParaparaumuProperties(
+      const allProperties = await discoverRegionProperties(
         fetchImpl,
         sitemapCacheStore,
         now(),
+        sitemapFilter,
+        sourceId,
+        regionId,
       );
       const cache = await propertyCacheStore.read();
       const changed = findChanged(allProperties, cache, now());
@@ -100,11 +110,9 @@ export function createHomesNzAdapter(
 
       for (const prop of pending) {
         try {
-          const result = await fetchPropertyPage(fetchImpl, prop);
+          const result = await fetchPropertyPage(fetchImpl, prop, sourceId, regionId);
           if (result) {
             results.push(result);
-            // Store revision date if available, otherwise use fetchedAt so the
-            // property is cached and not re-fetched on every refresh.
             newRevisions[prop.id] = result.estimatedValueDate ?? fetchedAt;
           }
         } catch {
@@ -121,10 +129,13 @@ export function createHomesNzAdapter(
   };
 }
 
-async function discoverParaparaumuProperties(
+async function discoverRegionProperties(
   fetchImpl: FetchImpl,
   sitemapCacheStore: CacheStore<SitemapCache>,
   now: string,
+  sitemapFilter: string,
+  sourceId: string,
+  regionId: string,
 ): Promise<PropertyUrl[]> {
   const cached = await sitemapCacheStore.read();
   if (cached) {
@@ -150,8 +161,11 @@ async function discoverParaparaumuProperties(
     }
 
     const text = await readSitemapText(response);
-    const blockRegex =
-      /<url>\s*<loc>(https:\/\/homes\.co\.nz\/address\/paraparaumu\/([^<]+)\/([^<]+)\/([A-Za-z0-9]+))<\/loc>/g;
+    const escapedFilter = sitemapFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const blockRegex = new RegExp(
+      `<url>\\s*<loc>(https:\\/\\/homes\\.co\\.nz\\/address\\/${escapedFilter}\\/([^<]+)\\/([^<]+)\\/([A-Za-z0-9]+))<\\/loc>`,
+      "g",
+    );
 
     let match = blockRegex.exec(text);
     while (match !== null) {
@@ -200,6 +214,8 @@ function findChanged(
 async function fetchPropertyPage(
   fetchImpl: FetchImpl,
   prop: PropertyUrl,
+  sourceId: string,
+  regionId: string,
 ): Promise<RawPropertyListing | null> {
   const response = await fetchImpl(prop.url, {
     headers: { "User-Agent": "paraparaumu-dashboard/0.1" },
@@ -231,12 +247,14 @@ async function fetchPropertyPage(
   const pd = b?.card?.property_details;
   if (!pd) return null;
 
-  return mapToRawPropertyListing(pd, prop);
+  return mapToRawPropertyListing(pd, prop, sourceId, regionId);
 }
 
 function mapToRawPropertyListing(
   pd: Record<string, unknown>,
   prop: PropertyUrl,
+  sourceId: string,
+  regionId: string,
 ): RawPropertyListing {
   const address =
     (pd.address as string) ?? prop.address.replace(/-/g, " ");
@@ -247,7 +265,7 @@ function mapToRawPropertyListing(
   return {
     address,
     title: address,
-    sourceId: "homes_co_nz",
+    sourceId,
     sourceUrl: prop.url,
     platform: "homes.co.nz",
     suburb,
@@ -293,6 +311,7 @@ function mapToRawPropertyListing(
     legalDescription: (pd.legal_description as string) ?? null,
     certificateOfTitle: (pd.certificate_of_title as string) ?? null,
     imageUrl: (pd.hero_cover_image_url as string) ?? null,
+    region: regionId,
   };
 }
 

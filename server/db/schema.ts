@@ -176,8 +176,16 @@ export function applySchema(db: Database.Database): void {
       "ALTER TABLE property_listings ADD COLUMN legal_description TEXT",
       "ALTER TABLE property_listings ADD COLUMN certificate_of_title TEXT",
       "ALTER TABLE property_listings ADD COLUMN image_url TEXT",
+      "ALTER TABLE items ADD COLUMN region TEXT NOT NULL DEFAULT 'kapiti'",
+      "ALTER TABLE property_listings ADD COLUMN region TEXT NOT NULL DEFAULT 'kapiti'",
+      "ALTER TABLE schools ADD COLUMN region TEXT NOT NULL DEFAULT 'kapiti'",
     ];
     for (const sql of propertyMigrations) {
       try { db.exec(sql); } catch { /* column already exists */ }
     }
+
+    // Indexes for region filtering (safe to re-create)
+    try { db.exec("CREATE INDEX IF NOT EXISTS items_region_idx ON items(region)"); } catch { /* ignore */ }
+    try { db.exec("CREATE INDEX IF NOT EXISTS property_listings_region_idx ON property_listings(region)"); } catch { /* ignore */ }
+    try { db.exec("CREATE INDEX IF NOT EXISTS schools_region_idx ON schools(region)"); } catch { /* ignore */ }
 }

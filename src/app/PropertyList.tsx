@@ -35,6 +35,7 @@ interface PropertyListProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   suburbs: string[];
+  councilName?: string;
 }
 
 export function PropertyList({
@@ -49,6 +50,7 @@ export function PropertyList({
   searchQuery,
   onSearchQueryChange,
   suburbs,
+  councilName = "Council",
 }: PropertyListProps) {
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -114,7 +116,7 @@ export function PropertyList({
       {/* Official records table */}
       {officialRecords.length > 0 && (
         <section className="official-records">
-          <h3 className="section-title">Official KCDC Records ({officialRecords.length})</h3>
+          <h3 className="section-title">Official {councilName} Records ({officialRecords.length})</h3>
           <table className="property-table">
             <thead>
               <tr>
@@ -141,7 +143,7 @@ export function PropertyList({
                       rel="noopener noreferrer"
                       className="source-link"
                     >
-                      KCDC
+                      {councilName}
                     </a>
                   </td>
                 </tr>
