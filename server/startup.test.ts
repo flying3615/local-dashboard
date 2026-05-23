@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { createInMemoryDatabase } from "./db/database";
 import { createRepositories } from "./db/repositories";
-import { shouldSeedMockData, runtimeAdapters, registerAdapterSources } from "./startup";
+import {
+  initialFetchIfNeeded,
+  registerAdapterSources,
+  runtimeAdapters,
+  shouldSeedMockData,
+} from "./startup";
+import type { SourceAdapter } from "./adapters/types";
 
 describe("startup", () => {
   it("does not include mock adapters by default", () => {
@@ -56,6 +62,64 @@ describe("startup", () => {
       lastSuccessAt: "2026-05-18T01:00:00.000Z",
       lastError: "Old error",
     });
+
+    db.close();
+  });
+});
+
+describe("initialFetchIfNeeded", () => {
+  function stubAdapter(sourceId: string): SourceAdapter {
+    return {
+      sourceId,
+      recordType: "property_listing",
+      source: {
+        name: sourceId,
+        type: "property_platform",
+        url: "https://example.com",
+        trustLevel: "platform",
+        enabled: true,
+        refreshIntervalMinutes: 1440,
+      },
+      async fetch() {
+        return [];
+      },
+    };
+  }
+
+  it("fetches adapters that have never succeeded", async () => {
+    const db = createInMemoryDatabase();
+    const repos = createRepositories(db);
+    const adapter = stubAdapter("test_source");
+
+    registerAdapterSources(repos, [adapter]);
+    expect(repos.sources.get("test_source")?.lastSuccessAt).toBeNull();
+
+    await initialFetchIfNeeded(repos, [adapter]);
+
+    expect(repos.sources.get("test_source")?.lastSuccessAt).not.toBeNull();
+
+    db.close();
+  });
+
+  it("skips adapters that have already fetched", async () => {
+    const db = createInMemoryDatabase();
+    const repos = createRepositories(db);
+    let fetchCount = 0;
+    const adapter: SourceAdapter = {
+      ...stubAdapter("test_source"),
+      async fetch() {
+        fetchCount++;
+        return [];
+      },
+    };
+
+    registerAdapterSources(repos, [adapter]);
+    await initialFetchIfNeeded(repos, [adapter]);
+    expect(fetchCount).toBe(1);
+
+    // Second call should skip — already fetched
+    await initialFetchIfNeeded(repos, [adapter]);
+    expect(fetchCount).toBe(1);
 
     db.close();
   });

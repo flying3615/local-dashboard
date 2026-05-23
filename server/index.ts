@@ -5,6 +5,7 @@ import { createDatabase } from "./db/database";
 import { createRepositories } from "./db/repositories";
 import { createApiRoutes, seedMockData } from "./api/routes";
 import {
+  initialFetchIfNeeded,
   registerAdapterSources,
   runtimeAdapters,
   shouldSeedMockData,
@@ -28,6 +29,15 @@ app.use(cors());
 app.use(express.json());
 app.use("/api", createApiRoutes(repositories, adapters));
 
-app.listen(PORT, () => {
-  console.log(`API server listening on http://localhost:${PORT}`);
-});
+initialFetchIfNeeded(repositories, adapters)
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`API server listening on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error: unknown) => {
+    console.error("Initial fetch failed:", error);
+    app.listen(PORT, () => {
+      console.log(`API server listening on http://localhost:${PORT} (initial fetch failed)`);
+    });
+  });

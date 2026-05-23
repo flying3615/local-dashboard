@@ -1,6 +1,7 @@
 import type { SourceAdapter } from "./adapters/types";
 import { activeAdapters, mockAdapters } from "./adapters/sourceConfig";
 import type { createRepositories } from "./db/repositories";
+import { refreshAll } from "./jobs/refreshAll";
 
 type Environment = Record<string, string | undefined>;
 type Repositories = ReturnType<typeof createRepositories>;
@@ -36,4 +37,19 @@ export function registerAdapterSources(
       lastError: existing?.lastError ?? null,
     });
   }
+}
+
+export async function initialFetchIfNeeded(
+  repositories: Repositories,
+  adapters: SourceAdapter[],
+): Promise<void> {
+  const needsFetch = adapters.filter((adapter) => {
+    const source = repositories.sources.get(adapter.sourceId);
+    return source?.enabled && source.lastSuccessAt === null;
+  });
+
+  if (needsFetch.length === 0) return;
+
+  console.log(`Initial fetch for: ${needsFetch.map((a) => a.sourceId).join(", ")}`);
+  await refreshAll({ repositories, adapters: needsFetch, force: true });
 }
