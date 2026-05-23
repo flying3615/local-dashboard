@@ -41,6 +41,18 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
         </section>
       )}
 
+      {item.address && (
+        <section className="detail-map">
+          <iframe
+            title="Property location"
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(`${item.address}, ${property?.suburb ?? item.area ?? ""}, New Zealand`)}&output=embed&z=15`}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+          />
+        </section>
+      )}
+
       <section className="detail-fields">
         <dl>
           {item.address && (

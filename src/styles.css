@@ -450,6 +450,19 @@
   flex-wrap: wrap;
 }
 
+.detail-map {
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.detail-map iframe {
+  display: block;
+  width: 100%;
+  height: 300px;
+  border: none;
+}
+
 .detail-fields {
   margin-bottom: 20px;
 }
