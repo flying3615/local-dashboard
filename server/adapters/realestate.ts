@@ -9,6 +9,13 @@ const SITEMAP_URL = "https://www.realestate.co.nz/residential-sale-listings.xml"
 const LISTING_API = `${PLATFORM_API}/search/v1/listings`;
 const CACHE_PATH = "data/realestate-cache.json";
 
+interface ListingPhoto {
+  "base-url"?: string;
+  large?: string;
+  medium?: string;
+  small?: string;
+}
+
 interface ListingAttributes {
   "bedroom-count"?: number;
   "bathroom-count"?: number;
@@ -21,6 +28,7 @@ interface ListingAttributes {
     start?: string;
     end?: string;
   }>;
+  photos?: ListingPhoto[];
   address?: {
     "full-address"?: string;
     suburb?: string;
@@ -201,6 +209,11 @@ async function fetchListing(
     .map((oh) => oh.start)
     .filter((s): s is string => s !== undefined);
 
+  const firstPhoto = attrs.photos?.[0];
+  const imageUrl = firstPhoto?.["base-url"]
+    ? `https://imgs.realestate.co.nz${firstPhoto["base-url"]}${firstPhoto.large ?? ""}`
+    : null;
+
   return {
     address: fullAddress,
     title: fullAddress,
@@ -217,6 +230,7 @@ async function fetchListing(
     floorArea: attrs["floor-area"] ?? null,
     listedAt: attrs["published-date"] ?? null,
     openHomeTimes,
+    imageUrl,
     rawSnapshotId: null,
   };
 }

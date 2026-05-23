@@ -30,6 +30,13 @@ function listingResponse(id: string, address: string) {
         "price-display": "Buyer enquiry over $850,000",
         "published-date": "2026-05-18T00:00:00.000Z",
         "open-homes": [{ start: "2026-05-24T01:00:00.000Z" }],
+        photos: [
+          {
+            "base-url": `/listings/${id}/abc123`,
+            large: ".crop.140x178.jpg",
+            medium: ".crop.105x134.jpg",
+          },
+        ],
         address: {
           "full-address": address,
           suburb: "Paraparaumu",
@@ -120,6 +127,7 @@ describe("createRealestateAdapter", () => {
         bedrooms: 3,
         bathrooms: 2,
         price: "Buyer enquiry over $850,000",
+        imageUrl: "https://imgs.realestate.co.nz/listings/111/abc123.crop.140x178.jpg",
       }),
     ]);
     expect(fetchedUrls.filter((url) => url.includes("/search/v1/listings/"))).toHaveLength(2);
