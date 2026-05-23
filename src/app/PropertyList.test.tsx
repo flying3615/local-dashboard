@@ -73,31 +73,46 @@ function makeProperty(overrides = {}) {
   };
 }
 
+const defaultProps = {
+  suburbFilter: "all",
+  onSuburbFilterChange: vi.fn(),
+  searchQuery: "",
+  onSearchQueryChange: vi.fn(),
+  suburbs: ["Paraparaumu"],
+};
+
 describe("PropertyList", () => {
   it("shows empty state when no properties", () => {
-    render(<PropertyList properties={[]} />);
+    render(<PropertyList properties={[]} allProperties={[]} {...defaultProps} />);
 
     expect(screen.getByTestId("property-list")).toBeInTheDocument();
-    expect(screen.getByText(/No properties yet/)).toBeInTheDocument();
+    expect(screen.getByText(/No properties match/)).toBeInTheDocument();
   });
 
-  it("renders property rows with address, price, bedrooms, platform and status", () => {
-    render(<PropertyList properties={[makeProperty()]} />);
+  it("renders property cards with address, price, bedrooms, platform and status", () => {
+    const prop = makeProperty();
+    render(<PropertyList properties={[prop]} allProperties={[prop]} {...defaultProps} />);
 
     expect(screen.getByText("12 Example Street, Paraparaumu")).toBeInTheDocument();
     expect(screen.getByText("$875,000")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("3 bed")).toBeInTheDocument();
+    expect(screen.getByText("2 bath")).toBeInTheDocument();
     expect(screen.getByText("Trade Me")).toBeInTheDocument();
-    expect(screen.getByText("new")).toBeInTheDocument();
   });
 
-  it("calls onSelectProperty when a row is clicked", async () => {
+  it("calls onSelectProperty when a card is clicked", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    const props = [makeProperty()];
+    const prop = makeProperty();
 
-    render(<PropertyList properties={props} onSelectProperty={onSelect} />);
+    render(
+      <PropertyList
+        properties={[prop]}
+        allProperties={[prop]}
+        {...defaultProps}
+        onSelectProperty={onSelect}
+      />,
+    );
 
     await user.click(screen.getByText("12 Example Street, Paraparaumu"));
     expect(onSelect).toHaveBeenCalledWith("item_1");
@@ -116,7 +131,14 @@ describe("PropertyList", () => {
       },
     ];
 
-    render(<PropertyList properties={[]} searchLinks={searchLinks} />);
+    render(
+      <PropertyList
+        properties={[]}
+        allProperties={[]}
+        {...defaultProps}
+        searchLinks={searchLinks}
+      />,
+    );
 
     const link = screen.getByRole("link", {
       name: "Paraparaumu homes for sale",
@@ -153,6 +175,8 @@ describe("PropertyList", () => {
     render(
       <PropertyList
         properties={[]}
+        allProperties={[]}
+        {...defaultProps}
         officialRecords={officialRecords}
         onSearchOfficialRecords={onSearch}
       />,

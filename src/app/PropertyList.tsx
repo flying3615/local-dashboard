@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { StatusBadge } from "../components/StatusBadge";
 import type {
@@ -8,137 +7,40 @@ import type {
   PropertyWithItem,
 } from "../lib/api";
 
-type SortColumn = "address" | "price" | "beds" | "baths" | "openHome" | "platform" | "status";
-type SortDir = "asc" | "desc";
-
-function sortProperties(list: PropertyWithItem[], col: SortColumn, dir: SortDir): PropertyWithItem[] {
-  return [...list].sort((a, b) => {
-    const pA = a.property;
-    const pB = b.property;
-    let va: string | number = "";
-    let vb: string | number = "";
-
-    switch (col) {
-      case "openHome": {
-        va = pA?.openHomeTimes?.[0] ? Date.parse(pA.openHomeTimes[0]) : 0;
-        vb = pB?.openHomeTimes?.[0] ? Date.parse(pB.openHomeTimes[0]) : 0;
-        break;
-      }
-      case "price": {
-        va = pA?.price ?? "";
-        vb = pB?.price ?? "";
-        break;
-      }
-      case "beds": {
-        va = pA?.bedrooms ?? -1;
-        vb = pB?.bedrooms ?? -1;
-        break;
-      }
-      case "baths": {
-        va = pA?.bathrooms ?? -1;
-        vb = pB?.bathrooms ?? -1;
-        break;
-      }
-      case "address": {
-        va = a.item.address ?? pA?.address ?? "";
-        vb = b.item.address ?? pB?.address ?? "";
-        break;
-      }
-      case "platform": {
-        va = pA?.platform ?? "";
-        vb = pB?.platform ?? "";
-        break;
-      }
-      case "status": {
-        va = pA?.watchStatus ?? "";
-        vb = pB?.watchStatus ?? "";
-        break;
-      }
-    }
-
-    if (va < vb) return dir === "asc" ? -1 : 1;
-    if (va > vb) return dir === "asc" ? 1 : -1;
-    return 0;
-  });
-}
-
-function SortHeader({
-  column,
-  label,
-  current,
-  dir,
-  onSort,
-}: {
-  column: SortColumn;
-  label: string;
-  current: SortColumn;
-  dir: SortDir;
-  onSort: (col: SortColumn) => void;
-}) {
-  const active = column === current;
-  return (
-    <th
-      className={`sortable-header ${active ? "sort-active" : ""}`}
-      onClick={() => onSort(column)}
-    >
-      {label}
-      <span className="sort-arrow">
-        {active ? (dir === "asc" ? " ↑" : " ↓") : ""}
-      </span>
-    </th>
-  );
-}
-
 interface PropertyListProps {
   properties: PropertyWithItem[];
+  allProperties: PropertyWithItem[];
   searchLinks?: PropertySearchLink[];
   officialRecords?: KapitiPropertyRecord[];
   onSearchOfficialRecords?: (query: string) => Promise<void> | void;
   onSelectProperty?: (id: string) => void;
+  suburbFilter: string;
+  onSuburbFilterChange: (suburb: string) => void;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+  suburbs: string[];
 }
 
 export function PropertyList({
   properties,
+  allProperties,
   searchLinks = [],
   officialRecords = [],
   onSearchOfficialRecords,
   onSelectProperty,
+  suburbFilter,
+  onSuburbFilterChange,
+  searchQuery,
+  onSearchQueryChange,
+  suburbs,
 }: PropertyListProps) {
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [sortCol, setSortCol] = useState<SortColumn>("openHome");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
-
-  const sortedProperties = useMemo(
-    () => sortProperties(properties, sortCol, sortDir),
-    [properties, sortCol, sortDir],
-  );
-
-  const totalPages = Math.max(1, Math.ceil(sortedProperties.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const pagedProperties = sortedProperties.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
-
-  const handleSort = (col: SortColumn) => {
-    if (sortCol === col) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortCol(col);
-      setSortDir("asc");
-    }
-    setPage(1);
-  };
 
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault();
-    if (!onSearchOfficialRecords || query.trim().length < 2) {
-      return;
-    }
+    if (!onSearchOfficialRecords || query.trim().length < 2) return;
 
     setIsSearching(true);
     setSearchError(null);
@@ -155,9 +57,9 @@ export function PropertyList({
 
   return (
     <div className="property-list" data-testid="property-list">
+      {/* Search links */}
       {searchLinks.length > 0 && (
-        <section className="external-searches">
-          <h2 className="section-title">Listing Searches</h2>
+        <div className="external-searches">
           <div className="search-link-list">
             {searchLinks.map((link) => (
               <a
@@ -173,16 +75,17 @@ export function PropertyList({
               </a>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
+      {/* Official lookup */}
       <form className="official-lookup" onSubmit={handleSearch}>
         <label htmlFor="official-property-query">Official property lookup</label>
         <div className="lookup-controls">
           <input
             id="official-property-query"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Address or street"
           />
           <button type="submit" disabled={isSearching || query.trim().length < 2}>
@@ -192,9 +95,10 @@ export function PropertyList({
         {searchError && <p className="lookup-error">{searchError}</p>}
       </form>
 
+      {/* Official records table */}
       {officialRecords.length > 0 && (
         <section className="official-records">
-          <h2 className="section-title">Official KCDC Records ({officialRecords.length})</h2>
+          <h3 className="section-title">Official KCDC Records ({officialRecords.length})</h3>
           <table className="property-table">
             <thead>
               <tr>
@@ -231,70 +135,113 @@ export function PropertyList({
         </section>
       )}
 
-      {properties.length === 0 ? (
-        <p className="empty-state">No properties yet. Refresh a source to see listings.</p>
-      ) : (
-        <table className="property-table">
-          <thead>
-            <tr>
-              <SortHeader column="address" label="Address" current={sortCol} dir={sortDir} onSort={handleSort} />
-              <SortHeader column="price" label="Price" current={sortCol} dir={sortDir} onSort={handleSort} />
-              <SortHeader column="beds" label="Beds" current={sortCol} dir={sortDir} onSort={handleSort} />
-              <SortHeader column="baths" label="Baths" current={sortCol} dir={sortDir} onSort={handleSort} />
-              <SortHeader column="openHome" label="Open Home" current={sortCol} dir={sortDir} onSort={handleSort} />
-              <SortHeader column="platform" label="Platform" current={sortCol} dir={sortDir} onSort={handleSort} />
-              <SortHeader column="status" label="Status" current={sortCol} dir={sortDir} onSort={handleSort} />
-            </tr>
-          </thead>
-          <tbody>
-            {pagedProperties.map(({ item, property }) => (
-              <tr
-                key={item.id}
-                className={`property-row ${onSelectProperty ? "property-row-clickable" : ""}`}
-                onClick={() => onSelectProperty?.(item.id)}
-              >
-                <td className="property-address">{item.address ?? property?.address ?? "Unknown"}</td>
-                <td>{property?.price ?? "-"}</td>
-                <td>{property?.bedrooms ?? "-"}</td>
-                <td>{property?.bathrooms ?? "-"}</td>
-                <td>
-                  {property?.openHomeTimes?.[0]
-                    ? new Date(property.openHomeTimes[0]).toLocaleDateString()
-                    : "-"}
-                </td>
-                <td>{property?.platform ?? "-"}</td>
-                <td>
-                  {property && <StatusBadge status={property.watchStatus} />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {/* Filter chips + search */}
+      <div className="filters">
+        <button
+          className={`filter-chip ${suburbFilter === "all" ? "active" : ""}`}
+          onClick={() => onSuburbFilterChange("all")}
+        >
+          All ({allProperties.length})
+        </button>
+        {suburbs.map((s) => {
+          const count = allProperties.filter(
+            (p) => (p.property?.suburb ?? p.item.area ?? "Unknown") === s,
+          ).length;
+          return (
+            <button
+              key={s}
+              className={`filter-chip ${suburbFilter === s ? "active" : ""}`}
+              onClick={() => onSuburbFilterChange(s)}
+            >
+              {s} ({count})
+            </button>
+          );
+        })}
+      </div>
 
-      {totalPages > 1 && (
-        <nav className="pagination" aria-label="Property list pagination">
-          <button
-            className="pagination-btn"
-            disabled={currentPage <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </button>
-          <span className="pagination-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="pagination-btn"
-            disabled={currentPage >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </nav>
+      {/* Search input */}
+      <div style={{ marginBottom: "var(--space-4)" }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchQueryChange(e.target.value)}
+          placeholder="Search by address..."
+          style={{
+            width: "100%",
+            maxWidth: 360,
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+            padding: "var(--space-2) var(--space-3)",
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--text-sm)",
+          }}
+        />
+      </div>
+
+      {/* Property grid */}
+      {properties.length === 0 ? (
+        <p className="empty-state">No properties match the current filter.</p>
+      ) : (
+        <div className="property-grid">
+          {properties.map(({ item, property }) => (
+            <article
+              key={item.id}
+              className="card"
+              onClick={() => onSelectProperty?.(item.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectProperty?.(item.id);
+                }
+              }}
+            >
+              <div className="card-img">
+                {property?.imageUrl ? (
+                  <img src={property.imageUrl} alt={item.title} />
+                ) : (
+                  <div className="card-img-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                  </div>
+                )}
+                {property?.watchStatus && property.watchStatus !== "new" && (
+                  <span className="property-tag">
+                    <StatusBadge status={property.watchStatus} />
+                  </span>
+                )}
+              </div>
+              <div className="card-body">
+                <div className="card-price">{property?.price ?? "Price TBC"}</div>
+                <div className="card-address">
+                  {item.address ?? property?.address ?? item.title}
+                </div>
+                <div className="card-suburb">{property?.suburb ?? item.area ?? ""}</div>
+                <div className="card-meta">
+                  {property?.bedrooms != null && <span>{property.bedrooms} bed</span>}
+                  {property?.bathrooms != null && <span>{property.bathrooms} bath</span>}
+                  {property?.parking != null && <span>{property.parking} park</span>}
+                  {property?.landArea != null && <span>{property.landArea} m²</span>}
+                </div>
+                <div className="card-footer">
+                  <span className="card-suburb">{property?.platform ?? ""}</span>
+                  {property?.openHomeTimes && property.openHomeTimes.length > 0 && (
+                    <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)" }}>
+                      Open home: {new Date(property.openHomeTimes[0]).toLocaleDateString("en-NZ", { weekday: "short", day: "numeric", month: "short" })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
       )}
     </div>
   );
+
 }
 
 function formatCurrency(value: number | null): string {

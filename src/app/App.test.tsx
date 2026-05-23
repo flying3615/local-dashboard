@@ -4,14 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 
-function mockApiResponses(dashboard = {}, sources = [], properties = [], schools = []) {
+function mockApiResponses(properties = [], sources = [], schools = [], searchLinks = []) {
   vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
     const url = String(input);
-    if (url.includes("/api/dashboard")) {
-      return Promise.resolve(
-        new Response(JSON.stringify(dashboard), { status: 200 }),
-      );
-    }
     if (url.includes("/api/sources")) {
       return Promise.resolve(
         new Response(JSON.stringify(sources), { status: 200 }),
@@ -20,6 +15,11 @@ function mockApiResponses(dashboard = {}, sources = [], properties = [], schools
     if (url.includes("/api/schools")) {
       return Promise.resolve(
         new Response(JSON.stringify(schools), { status: 200 }),
+      );
+    }
+    if (url.includes("/api/property-search-links")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(searchLinks), { status: 200 }),
       );
     }
     if (url.includes("/api/properties") && (!init || init.method !== "POST")) {
@@ -31,40 +31,23 @@ function mockApiResponses(dashboard = {}, sources = [], properties = [], schools
   });
 }
 
-function emptyDashboard() {
-  return {
-    sections: {
-      new_listings: [],
-      upcoming_open_homes: [],
-      school_events: [],
-      local_updates: [],
-      needs_review: [],
-      recent_activity: [],
-    },
-    totalItems: 0,
-  };
-}
-
 describe("App", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renders the dashboard heading", async () => {
-    mockApiResponses(emptyDashboard());
+  it("renders the hero heading", async () => {
+    mockApiResponses();
 
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: /Paraparaumu Dashboard/i }),
+      screen.getByRole("heading", { name: /Paraparaumu Property Dashboard/i }),
     ).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByTestId("dashboard")).toBeInTheDocument();
-    });
   });
 
   it("shows loading state then content", async () => {
-    mockApiResponses(emptyDashboard());
+    mockApiResponses();
 
     render(<App />);
 
@@ -85,32 +68,30 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 
-  it("has tab navigation buttons", async () => {
-    mockApiResponses(emptyDashboard());
+  it("has nav buttons", async () => {
+    mockApiResponses();
 
     render(<App />);
 
-    expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Properties" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analytics" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Schools" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sources" })).toBeInTheDocument();
   });
 
-  it("shows property list when switching to properties tab", async () => {
-    const user = userEvent.setup();
-    mockApiResponses(emptyDashboard());
+  it("shows property list on main page", async () => {
+    mockApiResponses();
 
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Properties" }));
     await waitFor(() => {
       expect(screen.getByTestId("property-list")).toBeInTheDocument();
     });
   });
 
-  it("shows school radar when switching to schools tab", async () => {
+  it("shows school radar when clicking Schools", async () => {
     const user = userEvent.setup();
-    mockApiResponses(emptyDashboard());
+    mockApiResponses();
 
     render(<App />);
 
@@ -120,9 +101,9 @@ describe("App", () => {
     });
   });
 
-  it("shows sources view when switching to sources tab", async () => {
+  it("shows sources view when clicking Sources", async () => {
     const user = userEvent.setup();
-    mockApiResponses(emptyDashboard());
+    mockApiResponses();
 
     render(<App />);
 

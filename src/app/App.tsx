@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
-  DashboardResponse,
   KapitiPropertyRecord,
   PropertyDetail as PropertyDetailType,
   PropertySearchLink,
@@ -9,7 +8,6 @@ import type {
   SchoolWithEvents,
 } from "../lib/api";
 import {
-  getDashboard,
   getProperties,
   getPropertySearchLinks,
   getProperty,
@@ -17,19 +15,18 @@ import {
   getSources,
   searchPropertyRecords,
 } from "../lib/api";
-import type { Item, Source } from "../lib/types";
-import { Dashboard } from "./Dashboard";
+import type { Source } from "../lib/types";
+import { parsePrice, median } from "../lib/analysis";
 import { PropertyAnalytics } from "./PropertyAnalytics";
 import { PropertyDetail } from "./PropertyDetail";
 import { PropertyList } from "./PropertyList";
 import { SchoolRadar } from "./SchoolRadar";
 import { Sources } from "./Sources";
 
-type Tab = "dashboard" | "properties" | "analytics" | "schools" | "sources";
+type Page = "main" | "schools" | "sources";
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
-  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+  const [page, setPage] = useState<Page>("main");
   const [sources, setSources] = useState<Source[]>([]);
   const [properties, setProperties] = useState<PropertyWithItem[]>([]);
   const [propertySearchLinks, setPropertySearchLinks] = useState<PropertySearchLink[]>([]);
@@ -40,33 +37,25 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const propertiesRef = useRef<HTMLElement>(null);
+  const analyticsRef = useRef<HTMLElement>(null);
+
+  const loadInitial = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [dashboard, srcs] = await Promise.all([
-        getDashboard(),
+      const [props, links, srcs] = await Promise.all([
+        getProperties(),
+        getPropertySearchLinks(),
         getSources(),
       ]);
-      setDashboardData(dashboard);
+      setProperties(props);
+      setPropertySearchLinks(links);
       setSources(srcs);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
-    }
-  }, []);
-
-  const loadProperties = useCallback(async () => {
-    try {
-      const [props, links] = await Promise.all([
-        getProperties(),
-        getPropertySearchLinks(),
-      ]);
-      setProperties(props);
-      setPropertySearchLinks(links);
-    } catch {
-      // keep stale data if fetch fails
     }
   }, []);
 
@@ -93,121 +82,255 @@ export function App() {
     setOfficialPropertyRecords(await searchPropertyRecords(query));
   }, []);
 
-  const handleDashboardItemClick = useCallback(
-    async (item: Item) => {
-      if (item.type !== "property_listing") return;
-      await loadPropertyDetail(item.id);
-      setActiveTab("properties");
-    },
-    [loadPropertyDetail],
-  );
+  useEffect(() => {
+    loadInitial();
+  }, [loadInitial]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-    if (activeTab === "properties" && properties.length === 0) {
-      loadProperties();
-    }
-  }, [activeTab, properties.length, loadProperties]);
-
-  useEffect(() => {
-    if (activeTab === "schools" && schools.length === 0) {
+    if (page === "schools" && schools.length === 0) {
       loadSchools();
     }
-  }, [activeTab, schools.length, loadSchools]);
+  }, [page, schools.length, loadSchools]);
 
-  useEffect(() => {
-    if (activeTab === "analytics" && properties.length === 0) {
-      loadProperties();
-    }
-  }, [activeTab, properties.length, loadProperties]);
-
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setSelectedPropertyId(null);
-    setPropertyDetail(null);
+  const scrollTo = (ref: React.RefObject<HTMLElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "properties", label: "Properties" },
-    { id: "analytics", label: "Analytics" },
-    { id: "schools", label: "Schools" },
-    { id: "sources", label: "Sources" },
-  ];
+  const handleNavClick = (target: Page | "properties" | "analytics") => {
+    if (target === "schools" || target === "sources") {
+      setPage(target);
+      setSelectedPropertyId(null);
+      setPropertyDetail(null);
+      window.scrollTo({ top: 0 });
+    } else if (target === "properties") {
+      setPage("main");
+      setTimeout(() => scrollTo(propertiesRef), 50);
+    } else if (target === "analytics") {
+      setPage("main");
+      setTimeout(() => scrollTo(analyticsRef), 50);
+    }
+  };
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedPropertyId(null);
+    setPropertyDetail(null);
+    loadInitial();
+  }, [loadInitial]);
+
+  // Compute hero stats
+  const heroStats = useMemo(() => {
+    const prices = properties
+      .map((p) => (p.property ? parsePrice(p.property.price) : null))
+      .filter((p): p is number => p != null);
+    const suburbs = new Set(
+      properties.map((p) => p.property?.suburb ?? p.item.area ?? "Unknown"),
+    );
+    return {
+      total: properties.length,
+      medianPrice: median(prices),
+      suburbCount: suburbs.size,
+    };
+  }, [properties]);
+
+  // Suburb filter state
+  const [suburbFilter, setSuburbFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const suburbs = useMemo(() => {
+    const set = new Set(
+      properties.map((p) => p.property?.suburb ?? p.item.area ?? "Unknown"),
+    );
+    return [...set].sort();
+  }, [properties]);
+
+  const filteredProperties = useMemo(() => {
+    let result = properties;
+    if (suburbFilter !== "all") {
+      result = result.filter(
+        (p) => (p.property?.suburb ?? p.item.area ?? "Unknown") === suburbFilter,
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((p) => {
+        const addr = (p.property?.address ?? p.item.address ?? p.item.title ?? "").toLowerCase();
+        return addr.includes(q);
+      });
+    }
+    return result;
+  }, [properties, suburbFilter, searchQuery]);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1 className="app-title">Paraparaumu Dashboard</h1>
-        <nav className="tab-nav" aria-label="Main navigation">
-          {tabs.map((tab) => (
+    <>
+      <nav className="nav">
+        <div className="nav-inner">
+          <span className="nav-brand" onClick={() => handleNavClick("properties")}>
+            Paraparaumu
+          </span>
+          <div className="nav-links">
             <button
-              key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? "tab-active" : ""}`}
-              onClick={() => handleTabChange(tab.id)}
-              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={page === "main" ? "active" : ""}
+              onClick={() => handleNavClick("properties")}
             >
-              {tab.label}
+              Properties
             </button>
-          ))}
-        </nav>
-      </header>
-
-      <main className="app-main">
-        {loading && <p className="status-message">Loading...</p>}
-        {error && (
-          <p className="status-message error-message">
-            {error}
-            <button onClick={loadData} className="retry-button">
-              Retry
+            <button
+              className={page === "main" ? "active" : ""}
+              onClick={() => handleNavClick("analytics")}
+            >
+              Analytics
             </button>
-          </p>
-        )}
+            <button
+              className={page === "schools" ? "active" : ""}
+              onClick={() => handleNavClick("schools")}
+            >
+              Schools
+            </button>
+            <button
+              className={page === "sources" ? "active" : ""}
+              onClick={() => handleNavClick("sources")}
+            >
+              Sources
+            </button>
+          </div>
+        </div>
+      </nav>
 
-        {!loading && !error && activeTab === "dashboard" && dashboardData && (
-          <Dashboard
-            sections={dashboardData.sections}
-            sources={sources}
-            onItemClick={handleDashboardItemClick}
-          />
-        )}
+      {page === "main" && (
+        <>
+          {/* Hero */}
+          <section className="hero">
+            <div className="hero-content">
+              <h1>Paraparaumu Property Dashboard</h1>
+              <p className="hero-subtitle">
+                Track listings, analyse market trends, and find the right property on the Kapiti Coast.
+              </p>
+              <div className="hero-tags">
+                {suburbs.slice(0, 6).map((s) => (
+                  <button
+                    key={s}
+                    className={`hero-tag ${suburbFilter === s ? "active" : ""}`}
+                    onClick={() => {
+                      setPage("main");
+                      setSuburbFilter(s);
+                      setTimeout(() => scrollTo(propertiesRef), 50);
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <div className="hero-stats">
+                <div>
+                  <div className="hero-stat-value">{heroStats.total}</div>
+                  <div className="hero-stat-label">Active Listings</div>
+                </div>
+                {heroStats.medianPrice != null && (
+                  <div>
+                    <div className="hero-stat-value">${heroStats.medianPrice.toLocaleString()}</div>
+                    <div className="hero-stat-label">Median Price</div>
+                  </div>
+                )}
+                <div>
+                  <div className="hero-stat-value">{heroStats.suburbCount}</div>
+                  <div className="hero-stat-label">Suburbs</div>
+                </div>
+              </div>
+            </div>
+          </section>
 
-        {!loading && !error && activeTab === "properties" && !selectedPropertyId && (
-          <PropertyList
-            properties={properties}
-            searchLinks={propertySearchLinks}
-            officialRecords={officialPropertyRecords}
-            onSearchOfficialRecords={handleSearchOfficialRecords}
-            onSelectProperty={loadPropertyDetail}
-          />
-        )}
+          {loading && (
+            <section className="property-section">
+              <div className="container">
+                <p className="status-message">Loading...</p>
+              </div>
+            </section>
+          )}
 
-        {!loading && !error && activeTab === "properties" && selectedPropertyId && propertyDetail && (
-          <PropertyDetail
-            detail={propertyDetail}
-            onBack={() => {
-              setSelectedPropertyId(null);
-              setPropertyDetail(null);
-              loadProperties();
-            }}
-          />
-        )}
+          {error && (
+            <section className="property-section">
+              <div className="container">
+                <p className="status-message error-message">
+                  {error}
+                  <button onClick={loadInitial} className="retry-button">Retry</button>
+                </p>
+              </div>
+            </section>
+          )}
 
-        {!loading && !error && activeTab === "analytics" && (
-          <PropertyAnalytics properties={properties} />
-        )}
+          {!loading && !error && (
+            <>
+              {/* Properties */}
+              <section className="property-section" ref={propertiesRef}>
+                <div className="container">
+                  <h2>Properties</h2>
+                  <PropertyList
+                    properties={filteredProperties}
+                    allProperties={properties}
+                    searchLinks={propertySearchLinks}
+                    officialRecords={officialPropertyRecords}
+                    onSearchOfficialRecords={handleSearchOfficialRecords}
+                    onSelectProperty={loadPropertyDetail}
+                    suburbFilter={suburbFilter}
+                    onSuburbFilterChange={setSuburbFilter}
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                    suburbs={suburbs}
+                  />
+                </div>
+              </section>
 
-        {!loading && !error && activeTab === "schools" && (
-          <SchoolRadar schools={schools} />
-        )}
+              {/* Analytics */}
+              <section className="analytics-section-wrapper" ref={analyticsRef}>
+                <div className="container">
+                  <h2>Analytics</h2>
+                  <PropertyAnalytics properties={properties} />
+                </div>
+              </section>
+            </>
+          )}
+        </>
+      )}
 
-        {!loading && !error && activeTab === "sources" && (
-          <Sources sources={sources} />
-        )}
-      </main>
-    </div>
+      {page === "schools" && <SchoolRadar schools={schools} />}
+      {page === "sources" && <Sources sources={sources} />}
+
+      {/* Property Detail Modal */}
+      {selectedPropertyId && propertyDetail && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseModal();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") handleCloseModal();
+          }}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+        >
+          <div className="modal">
+            <div className="modal-header">
+              <span className="modal-title">{propertyDetail.item.title}</span>
+              <button className="modal-close" onClick={handleCloseModal} aria-label="Close">
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <PropertyDetail detail={propertyDetail} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <footer className="app-footer">
+        <div className="footer-inner">
+          <div className="footer-bottom">
+            <span>Paraparaumu Dashboard</span>
+            <span>Last refreshed: {new Date().toLocaleDateString("en-NZ")}</span>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }

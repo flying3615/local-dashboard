@@ -4,10 +4,9 @@ import type { PropertyDetail as PropertyDetailType } from "../lib/api";
 
 interface PropertyDetailProps {
   detail: PropertyDetailType;
-  onBack?: () => void;
 }
 
-export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
+export function PropertyDetail({ detail }: PropertyDetailProps) {
   const { item, property, source, notes } = detail;
 
   const hasFinancials =
@@ -31,15 +30,6 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
 
   return (
     <div className="property-detail" data-testid="property-detail">
-      {onBack && (
-        <button className="back-button" onClick={onBack}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 3L5 7l4 4" />
-          </svg>
-          Back to list
-        </button>
-      )}
-
       {property?.imageUrl ? (
         <div className="detail-hero">
           <img
@@ -55,10 +45,16 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
           </div>
         </div>
       ) : (
-        <header className="detail-header">
-          <h2>{item.title}</h2>
-          {item.address && <p className="detail-header-address">{item.address}</p>}
-        </header>
+        <>
+          <div className="detail-img-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </div>
+          <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 600, marginBottom: "var(--space-1)" }}>{item.title}</h2>
+          {item.address && <p className="detail-listed" style={{ marginBottom: "var(--space-5)" }}>{item.address}</p>}
+        </>
       )}
 
       <div className="detail-badges">
@@ -187,39 +183,39 @@ export function PropertyDetail({ detail, onBack }: PropertyDetailProps) {
           <h3 className="detail-card-title">Council & Property Data</h3>
           <div className="detail-card-grid">
             {property.decadeBuilt && (
-              <div className="detail-field">
-                <span className="detail-field-label">Decade Built</span>
-                <span className="detail-field-value">{property.decadeBuilt}</span>
+              <div className="detail-item">
+                <span className="detail-item-label">Decade Built</span>
+                <span className="detail-item-value">{property.decadeBuilt}</span>
               </div>
             )}
             {property.contour && (
-              <div className="detail-field">
-                <span className="detail-field-label">Contour</span>
-                <span className="detail-field-value">{property.contour}</span>
+              <div className="detail-item">
+                <span className="detail-item-label">Contour</span>
+                <span className="detail-item-value">{property.contour}</span>
               </div>
             )}
             {property.ownershipType && (
-              <div className="detail-field">
-                <span className="detail-field-label">Ownership</span>
-                <span className="detail-field-value">{property.ownershipType}</span>
+              <div className="detail-item">
+                <span className="detail-item-label">Ownership</span>
+                <span className="detail-item-value">{property.ownershipType}</span>
               </div>
             )}
             {property.buildingConstruction && (
-              <div className="detail-field">
-                <span className="detail-field-label">Construction</span>
-                <span className="detail-field-value">{property.buildingConstruction}</span>
+              <div className="detail-item">
+                <span className="detail-item-label">Construction</span>
+                <span className="detail-item-value">{property.buildingConstruction}</span>
               </div>
             )}
             {property.legalDescription && (
-              <div className="detail-field detail-field--wide">
-                <span className="detail-field-label">Legal Description</span>
-                <span className="detail-field-value">{property.legalDescription}</span>
+              <div className="detail-item" style={{ gridColumn: "1 / -1" }}>
+                <span className="detail-item-label">Legal Description</span>
+                <span className="detail-item-value">{property.legalDescription}</span>
               </div>
             )}
             {property.certificateOfTitle && (
-              <div className="detail-field">
-                <span className="detail-field-label">Title</span>
-                <span className="detail-field-value">{property.certificateOfTitle}</span>
+              <div className="detail-item">
+                <span className="detail-item-label">Title</span>
+                <span className="detail-item-value">{property.certificateOfTitle}</span>
               </div>
             )}
           </div>

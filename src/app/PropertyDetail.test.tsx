@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { PropertyDetail } from "./PropertyDetail";
 
@@ -124,25 +123,6 @@ describe("PropertyDetail", () => {
     render(<PropertyDetail detail={makeDetail()} />);
 
     expect(screen.getByText("Open Homes")).toBeInTheDocument();
-  });
-
-  it("shows back button when onBack provided", async () => {
-    const user = userEvent.setup();
-    const onBack = vi.fn();
-
-    render(<PropertyDetail detail={makeDetail()} onBack={onBack} />);
-
-    const backButton = screen.getByRole("button", { name: /back to list/i });
-    expect(backButton).toBeInTheDocument();
-
-    await user.click(backButton);
-    expect(onBack).toHaveBeenCalled();
-  });
-
-  it("hides back button when onBack not provided", () => {
-    render(<PropertyDetail detail={makeDetail()} />);
-
-    expect(screen.queryByRole("button", { name: /back to list/i })).not.toBeInTheDocument();
   });
 
   it("hides notes section when no notes", () => {
