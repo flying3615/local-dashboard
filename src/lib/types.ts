@@ -56,6 +56,7 @@ export interface Item {
   status: ItemStatus;
   tags: string[];
   rawSnapshotId: string | null;
+  lastSeenAt: string | null;
 }
 
 export interface PropertyListing {

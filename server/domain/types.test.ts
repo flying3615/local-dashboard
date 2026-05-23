@@ -19,6 +19,7 @@ describe("domain schemas", () => {
       status: "new",
       tags: ["new"],
       rawSnapshotId: "raw_1",
+      lastSeenAt: null,
     });
 
     expect(item.type).toBe("property_listing");
@@ -57,6 +58,7 @@ describe("domain schemas", () => {
         status: "new",
         tags: [],
         rawSnapshotId: null,
+        lastSeenAt: null,
       }),
     ).toThrow();
   });

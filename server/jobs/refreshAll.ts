@@ -14,6 +14,8 @@ import { tagItem } from "../pipeline/tag";
 
 type Repositories = ReturnType<typeof createRepositories>;
 
+const STALE_ITEM_THRESHOLD_DAYS = 7;
+
 export interface RefreshAllOptions {
   repositories: Repositories;
   adapters?: SourceAdapter[];
@@ -92,6 +94,11 @@ export async function refreshAll({
           lastSuccessAt: fetchedAt,
           lastError: null,
         });
+
+        const cutoff = new Date(
+          Date.parse(fetchedAt) - STALE_ITEM_THRESHOLD_DAYS * 86_400_000,
+        ).toISOString();
+        repositories.items.deleteStale(adapter.sourceId, cutoff);
       });
 
       results.push({
@@ -173,10 +180,10 @@ function upsertNormalizedRecord(
         },
         { fetchedAt },
       );
-      const item = mergeExistingItemState(
-        repositories,
-        tagItem(normalized.item),
-      );
+      const item = {
+        ...mergeExistingItemState(repositories, tagItem(normalized.item)),
+        lastSeenAt: fetchedAt,
+      };
       const property = mergeExistingPropertyState(
         repositories,
         normalized.property,
@@ -193,10 +200,13 @@ function upsertNormalizedRecord(
         source,
         rawSnapshotId,
       );
-      const item = mergeExistingItemState(
-        repositories,
-        tagSchoolEvent(normalizedItem),
-      );
+      const item = {
+        ...mergeExistingItemState(
+          repositories,
+          tagSchoolEvent(normalizedItem),
+        ),
+        lastSeenAt: fetchedAt,
+      };
       const savedItem = repositories.items.upsert(item);
       const school = createSchoolFromEventRecord(record, savedItem);
       const savedSchool = repositories.schools.upsert(school);
@@ -213,10 +223,13 @@ function upsertNormalizedRecord(
         source,
         rawSnapshotId,
       );
-      const item = mergeExistingItemState(
-        repositories,
-        tagSchoolEvent(normalizedItem),
-      );
+      const item = {
+        ...mergeExistingItemState(
+          repositories,
+          tagSchoolEvent(normalizedItem),
+        ),
+        lastSeenAt: fetchedAt,
+      };
       const savedItem = repositories.items.upsert(item);
       repositories.schools.upsert(
         mergeExistingSchoolState(
@@ -228,10 +241,13 @@ function upsertNormalizedRecord(
     }
 
     case "council_notice": {
-      const item = mergeExistingItemState(
-        repositories,
-        normalizeCouncilNotice(record, adapter, source, rawSnapshotId),
-      );
+      const item = {
+        ...mergeExistingItemState(
+          repositories,
+          normalizeCouncilNotice(record, adapter, source, rawSnapshotId),
+        ),
+        lastSeenAt: fetchedAt,
+      };
       return repositories.items.upsert(item);
     }
 
@@ -400,6 +416,7 @@ function normalizeSchoolProfile(
     status: "new",
     tags: getStringArray(raw, "tags"),
     rawSnapshotId,
+    lastSeenAt: null,
   };
 }
 
@@ -428,6 +445,7 @@ function normalizeCouncilNotice(
     status: "new",
     tags: getStringArray(raw, "tags"),
     rawSnapshotId,
+    lastSeenAt: null,
   };
 }
 
@@ -464,6 +482,7 @@ function normalizeSchoolEvent(
     status: "new",
     tags,
     rawSnapshotId,
+    lastSeenAt: null,
   };
 }
 

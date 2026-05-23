@@ -71,6 +71,7 @@ export const itemSchema = z.object({
   status: itemStatusSchema,
   tags: z.array(z.string()),
   rawSnapshotId: z.string().nullable(),
+  lastSeenAt: z.string().nullable(),
 });
 
 export const propertyListingSchema = z.object({

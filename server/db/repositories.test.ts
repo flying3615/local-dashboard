@@ -58,6 +58,7 @@ describe("repositories", () => {
       status: "new",
       tags: ["new"],
       rawSnapshotId: "raw_1",
+      lastSeenAt: null,
     });
 
     repos.properties.upsert({
@@ -129,6 +130,7 @@ describe("repositories", () => {
       status: "new",
       tags: ["new"],
       rawSnapshotId: null,
+      lastSeenAt: null,
     });
 
     repos.itemLinks.upsert({
@@ -297,6 +299,7 @@ describe("repositories", () => {
       status: "new",
       tags: ["new"],
       rawSnapshotId: null,
+      lastSeenAt: null,
     });
 
     repos.properties.upsert({
@@ -463,6 +466,7 @@ describe("repositories", () => {
       status: "new",
       tags: ["school", "paraparaumu"],
       rawSnapshotId: null,
+      lastSeenAt: null,
     });
 
     repos.schoolEvents.upsert({

@@ -107,6 +107,7 @@ describe("API routes", () => {
       status: "new",
       tags: ["kapiti"],
       rawSnapshotId: null,
+      lastSeenAt: null,
     });
     repos.items.upsert({
       id: "new_notice",
@@ -123,6 +124,7 @@ describe("API routes", () => {
       status: "new",
       tags: ["kapiti"],
       rawSnapshotId: null,
+      lastSeenAt: null,
     });
 
     const res = await fetch(`${url}/api/dashboard`);

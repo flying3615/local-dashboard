@@ -21,6 +21,7 @@ function makeDetail(overrides = {}) {
       status: "new" as const,
       tags: ["paraparaumu", "open_home_soon"],
       rawSnapshotId: null,
+      lastSeenAt: null,
     },
     property: {
       id: "property_1",

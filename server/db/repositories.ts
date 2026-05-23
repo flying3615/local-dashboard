@@ -37,6 +37,7 @@ type ItemRow = {
   status: Item["status"];
   tags: string;
   raw_snapshot_id: string | null;
+  last_seen_at: string | null;
 };
 
 type PropertyListingRow = {
@@ -278,7 +279,8 @@ export function createRepositories(db: AppDatabase) {
               ends_at,
               status,
               tags,
-              raw_snapshot_id
+              raw_snapshot_id,
+              last_seen_at
             )
             VALUES (
               @id,
@@ -294,7 +296,8 @@ export function createRepositories(db: AppDatabase) {
               @endsAt,
               @status,
               @tags,
-              @rawSnapshotId
+              @rawSnapshotId,
+              @lastSeenAt
             )
             ON CONFLICT(id) DO UPDATE SET
               type = excluded.type,
@@ -310,6 +313,7 @@ export function createRepositories(db: AppDatabase) {
               status = excluded.status,
               tags = excluded.tags,
               raw_snapshot_id = excluded.raw_snapshot_id,
+              last_seen_at = excluded.last_seen_at,
               updated_at = CURRENT_TIMESTAMP
           `,
         ).run({
@@ -329,6 +333,15 @@ export function createRepositories(db: AppDatabase) {
                 .all(filters.type) as ItemRow[]);
 
         return rows.map(mapItemRow);
+      },
+
+      deleteStale(sourceId: string, olderThanIso: string): number {
+        const result = db
+          .prepare(
+            "DELETE FROM items WHERE source_id = ? AND last_seen_at < ?",
+          )
+          .run(sourceId, olderThanIso);
+        return result.changes;
       },
     },
 
@@ -713,6 +726,7 @@ function mapItemRow(row: ItemRow): Item {
     status: row.status,
     tags: JSON.parse(row.tags),
     rawSnapshotId: row.raw_snapshot_id,
+    lastSeenAt: row.last_seen_at,
   });
 }
 

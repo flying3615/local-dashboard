@@ -22,6 +22,7 @@ function makeProperty(overrides = {}) {
       status: "new" as const,
       tags: ["paraparaumu"],
       rawSnapshotId: null,
+      lastSeenAt: null,
     },
     property: {
       id: "property_1",
