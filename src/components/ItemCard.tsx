@@ -5,6 +5,7 @@ interface ItemCardProps {
   item: Item;
   source?: Source | null;
   detailHref?: string;
+  onClick?: () => void;
 }
 
 const typeLabels: Record<string, string> = {
@@ -18,9 +19,26 @@ const typeLabels: Record<string, string> = {
   manual_note: "Note",
 };
 
-export function ItemCard({ item, source, detailHref }: ItemCardProps) {
+export function ItemCard({ item, source, detailHref, onClick }: ItemCardProps) {
+  const handleClick = detailHref ? undefined : onClick;
+  const clickable = Boolean(detailHref || onClick);
   const content = (
-    <article className="item-card">
+    <article
+      className={`item-card${clickable ? " item-card--clickable" : ""}`}
+      onClick={handleClick}
+      role={handleClick ? "button" : undefined}
+      tabIndex={handleClick ? 0 : undefined}
+      onKeyDown={
+        handleClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleClick();
+              }
+            }
+          : undefined
+      }
+    >
       <div className="item-card-header">
         <span className="item-type-label">
           {typeLabels[item.type] ?? item.type}

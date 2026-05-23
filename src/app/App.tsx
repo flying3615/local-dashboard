@@ -17,7 +17,7 @@ import {
   getSources,
   searchPropertyRecords,
 } from "../lib/api";
-import type { Source } from "../lib/types";
+import type { Item, Source } from "../lib/types";
 import { Dashboard } from "./Dashboard";
 import { PropertyDetail } from "./PropertyDetail";
 import { PropertyList } from "./PropertyList";
@@ -92,6 +92,15 @@ export function App() {
     setOfficialPropertyRecords(await searchPropertyRecords(query));
   }, []);
 
+  const handleDashboardItemClick = useCallback(
+    async (item: Item) => {
+      if (item.type !== "property_listing") return;
+      await loadPropertyDetail(item.id);
+      setActiveTab("properties");
+    },
+    [loadPropertyDetail],
+  );
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -151,7 +160,11 @@ export function App() {
         )}
 
         {!loading && !error && activeTab === "dashboard" && dashboardData && (
-          <Dashboard sections={dashboardData.sections} sources={sources} />
+          <Dashboard
+            sections={dashboardData.sections}
+            sources={sources}
+            onItemClick={handleDashboardItemClick}
+          />
         )}
 
         {!loading && !error && activeTab === "properties" && !selectedPropertyId && (
