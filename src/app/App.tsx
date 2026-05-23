@@ -19,12 +19,13 @@ import {
 } from "../lib/api";
 import type { Item, Source } from "../lib/types";
 import { Dashboard } from "./Dashboard";
+import { PropertyAnalytics } from "./PropertyAnalytics";
 import { PropertyDetail } from "./PropertyDetail";
 import { PropertyList } from "./PropertyList";
 import { SchoolRadar } from "./SchoolRadar";
 import { Sources } from "./Sources";
 
-type Tab = "dashboard" | "properties" | "schools" | "sources";
+type Tab = "dashboard" | "properties" | "analytics" | "schools" | "sources";
 
 export function App() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
@@ -117,6 +118,12 @@ export function App() {
     }
   }, [activeTab, schools.length, loadSchools]);
 
+  useEffect(() => {
+    if (activeTab === "analytics" && properties.length === 0) {
+      loadProperties();
+    }
+  }, [activeTab, properties.length, loadProperties]);
+
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     setSelectedPropertyId(null);
@@ -126,6 +133,7 @@ export function App() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "dashboard", label: "Dashboard" },
     { id: "properties", label: "Properties" },
+    { id: "analytics", label: "Analytics" },
     { id: "schools", label: "Schools" },
     { id: "sources", label: "Sources" },
   ];
@@ -186,6 +194,10 @@ export function App() {
               loadProperties();
             }}
           />
+        )}
+
+        {!loading && !error && activeTab === "analytics" && (
+          <PropertyAnalytics properties={properties} />
         )}
 
         {!loading && !error && activeTab === "schools" && (
