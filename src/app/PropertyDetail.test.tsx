@@ -100,8 +100,10 @@ describe("PropertyDetail", () => {
     expect(screen.getByText("$875,000")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("510 m²")).toBeInTheDocument();
-    expect(screen.getByText("140 m²")).toBeInTheDocument();
+    expect(screen.getByText("510")).toBeInTheDocument();
+    expect(screen.getByText("m² land")).toBeInTheDocument();
+    expect(screen.getByText("140")).toBeInTheDocument();
+    expect(screen.getByText("m² floor")).toBeInTheDocument();
     expect(screen.getAllByText("Trade Me")).toHaveLength(2);
     expect(screen.getByText("watching")).toBeInTheDocument();
     expect(screen.getByText("paraparaumu")).toBeInTheDocument();
@@ -132,7 +134,7 @@ describe("PropertyDetail", () => {
 
     render(<PropertyDetail detail={makeDetail()} onBack={onBack} />);
 
-    const backButton = screen.getByText("← Back to list");
+    const backButton = screen.getByRole("button", { name: /back to list/i });
     expect(backButton).toBeInTheDocument();
 
     await user.click(backButton);
@@ -142,7 +144,7 @@ describe("PropertyDetail", () => {
   it("hides back button when onBack not provided", () => {
     render(<PropertyDetail detail={makeDetail()} />);
 
-    expect(screen.queryByText("← Back to list")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /back to list/i })).not.toBeInTheDocument();
   });
 
   it("hides notes section when no notes", () => {
