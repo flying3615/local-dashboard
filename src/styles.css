@@ -364,9 +364,17 @@ section.band-section {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   background: linear-gradient(135deg, #e8e8ed 0%, #d2d2d7 100%);
+}
+
+.card-img-placeholder-text {
+  font-size: var(--text-xs);
+  color: var(--meta);
+  letter-spacing: 0.02em;
 }
 
 .card-img-placeholder svg {

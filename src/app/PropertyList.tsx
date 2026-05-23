@@ -1,5 +1,21 @@
 import { useState, type FormEvent } from "react";
 
+function PropertyImg({ src, alt }: { src: string; alt: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return (
+      <div className="card-img-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+        <span className="card-img-placeholder-text">No image</span>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} onError={() => setBroken(true)} />;
+}
+
 import { StatusBadge } from "../components/StatusBadge";
 import type {
   KapitiPropertyRecord,
@@ -199,13 +215,14 @@ export function PropertyList({
             >
               <div className="card-img">
                 {property?.imageUrl ? (
-                  <img src={property.imageUrl} alt={item.title} />
+                  <PropertyImg src={property.imageUrl} alt={item.title} />
                 ) : (
                   <div className="card-img-placeholder">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <polyline points="9 22 9 12 15 12 15 22" />
                     </svg>
+                    <span className="card-img-placeholder-text">No image</span>
                   </div>
                 )}
                 {property?.watchStatus && property.watchStatus !== "new" && (

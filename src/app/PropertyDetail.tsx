@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { SourceLink } from "../components/SourceLink";
 import { StatusBadge } from "../components/StatusBadge";
 import type { PropertyDetail as PropertyDetailType } from "../lib/api";
@@ -8,6 +10,7 @@ interface PropertyDetailProps {
 
 export function PropertyDetail({ detail }: PropertyDetailProps) {
   const { item, property, source, notes } = detail;
+  const [heroBroken, setHeroBroken] = useState(false);
 
   const hasFinancials =
     property?.estimatedValueLow != null ||
@@ -30,12 +33,13 @@ export function PropertyDetail({ detail }: PropertyDetailProps) {
 
   return (
     <div className="property-detail" data-testid="property-detail">
-      {property?.imageUrl ? (
+      {property?.imageUrl && !heroBroken ? (
         <div className="detail-hero">
           <img
             src={property.imageUrl}
             alt={item.title}
             className="detail-hero-image"
+            onError={() => setHeroBroken(true)}
           />
           <div className="detail-hero-overlay">
             <h2 className="detail-hero-title">{item.title}</h2>
