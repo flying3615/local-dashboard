@@ -13,16 +13,19 @@ export interface DashboardSections {
 interface DashboardProps {
   sections: DashboardSections;
   sources: Source[];
+  onItemClick?: (item: Item) => void;
 }
 
 function Section({
   title,
   items,
   sources,
+  onItemClick,
 }: {
   title: string;
   items: Item[];
   sources: Source[];
+  onItemClick?: (item: Item) => void;
 }) {
   if (items.length === 0) return null;
 
@@ -34,7 +37,14 @@ function Section({
       <div className="item-grid">
         {items.map((item) => {
           const source = sources.find((s) => s.id === item.sourceId);
-          return <ItemCard key={item.id} item={item} source={source} />;
+          return (
+            <ItemCard
+              key={item.id}
+              item={item}
+              source={source}
+              onClick={onItemClick ? () => onItemClick(item) : undefined}
+            />
+          );
         })}
       </div>
     </section>
@@ -50,7 +60,7 @@ const sectionDefs: Array<{ key: keyof DashboardSections; label: string }> = [
   { key: "recent_activity", label: "Recent Activity" },
 ];
 
-export function Dashboard({ sections, sources }: DashboardProps) {
+export function Dashboard({ sections, sources, onItemClick }: DashboardProps) {
   return (
     <div className="dashboard" data-testid="dashboard">
       {sectionDefs.map(({ key, label }) => (
@@ -59,6 +69,7 @@ export function Dashboard({ sections, sources }: DashboardProps) {
           title={label}
           items={sections[key] ?? []}
           sources={sources}
+          onItemClick={onItemClick}
         />
       ))}
     </div>
