@@ -208,7 +208,7 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                 <Tooltip
                   formatter={(value, name) => [
                     `$${Number(value).toLocaleString()}`,
-                    name === "price" ? "Listing Price" : "Council Valuation",
+                    name === "Price" ? "Listing Price" : "Council Valuation",
                   ]}
                   labelFormatter={() => ""}
                   contentStyle={{
