@@ -109,10 +109,19 @@ export function PropertyList({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<SortColumn>("openHome");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const sortedProperties = useMemo(
     () => sortProperties(properties, sortCol, sortDir),
     [properties, sortCol, sortDir],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sortedProperties.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedProperties = sortedProperties.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
   );
 
   const handleSort = (col: SortColumn) => {
@@ -122,6 +131,7 @@ export function PropertyList({
       setSortCol(col);
       setSortDir("asc");
     }
+    setPage(1);
   };
 
   const handleSearch = async (event: FormEvent) => {
@@ -237,7 +247,7 @@ export function PropertyList({
             </tr>
           </thead>
           <tbody>
-            {sortedProperties.map(({ item, property }) => (
+            {pagedProperties.map(({ item, property }) => (
               <tr
                 key={item.id}
                 className={`property-row ${onSelectProperty ? "property-row-clickable" : ""}`}
@@ -260,6 +270,28 @@ export function PropertyList({
             ))}
           </tbody>
         </table>
+      )}
+
+      {totalPages > 1 && (
+        <nav className="pagination" aria-label="Property list pagination">
+          <button
+            className="pagination-btn"
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            Previous
+          </button>
+          <span className="pagination-info">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="pagination-btn"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </nav>
       )}
     </div>
   );
