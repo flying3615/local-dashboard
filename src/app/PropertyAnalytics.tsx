@@ -39,6 +39,7 @@ type SectionId = (typeof SECTIONS)[number];
 
 export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
   const [open, setOpen] = useState<Set<SectionId>>(new Set(["distribution"]));
+  const [selectedBin, setSelectedBin] = useState<{ low: number; high: number; range: string } | null>(null);
 
   const toggle = (id: SectionId) => {
     setOpen((prev) => {
@@ -91,6 +92,16 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
           gap: m.estimateGap!,
         })),
     [metrics],
+  );
+
+  const filteredByBin = useMemo(
+    () =>
+      selectedBin
+        ? metrics.filter(
+            (m) => m.price != null && m.price >= selectedBin.low && m.price < selectedBin.high,
+          )
+        : [],
+    [metrics, selectedBin],
   );
 
   const prices = metrics
@@ -163,6 +174,7 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
           <Section
             id="distribution"
             title="Price Distribution"
+            hint="Click a bar to filter listings"
             open={open.has("distribution")}
             onToggle={toggle}
           >
@@ -186,9 +198,63 @@ export function PropertyAnalytics({ properties }: PropertyAnalyticsProps) {
                     fontSize: 13,
                   }}
                 />
-                <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="count"
+                  fill="#2563eb"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  onClick={(data) => {
+                    const payload = data.payload as { low: number; range: string };
+                    if (!payload) return;
+                    const bracketSize = 100_000;
+                    setSelectedBin((prev) =>
+                      prev?.low === payload.low
+                        ? null
+                        : { low: payload.low, high: payload.low + bracketSize, range: payload.range },
+                    );
+                  }}
+                />
               </BarChart>
             </ResponsiveContainer>
+            {selectedBin && (
+              <div className="analytics-filtered">
+                <div className="analytics-filtered-header">
+                  <span className="analytics-filtered-label">
+                    {selectedBin.range} — {filteredByBin.length} listing{filteredByBin.length !== 1 ? "s" : ""}
+                  </span>
+                  <button
+                    className="analytics-filter-clear"
+                    onClick={() => setSelectedBin(null)}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <table className="property-table">
+                  <thead>
+                    <tr>
+                      <th>Address</th>
+                      <th>Suburb</th>
+                      <th>Price</th>
+                      <th>Beds</th>
+                      <th>m² Land</th>
+                      <th>$/m²</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredByBin.map((m) => (
+                      <tr key={m.id}>
+                        <td className="property-address">{m.address}</td>
+                        <td>{m.suburb}</td>
+                        <td>{m.price != null ? `$${m.price.toLocaleString()}` : "—"}</td>
+                        <td>{m.bedrooms ?? "—"}</td>
+                        <td>{m.landArea ?? "—"}</td>
+                        <td>{m.pricePerM2Land != null ? `$${m.pricePerM2Land.toLocaleString()}` : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Section>
         )}
 

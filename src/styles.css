@@ -982,6 +982,40 @@
   font-weight: 600;
 }
 
+.analytics-filtered {
+  margin-top: 16px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.analytics-filtered-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.analytics-filtered-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.analytics-filter-clear {
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.analytics-filter-clear:hover {
+  background: #f0f0f0;
+  color: var(--color-text);
+}
+
 /* ---- Empty State ---- */
 .empty-state {
   color: var(--color-text-muted);
