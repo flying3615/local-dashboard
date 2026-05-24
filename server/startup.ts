@@ -1,5 +1,6 @@
 import type { SourceAdapter } from "./adapters/types";
-import { activeAdapters, mockAdapters } from "./adapters/sourceConfig";
+import { adaptersForRegion, globalAdapters, mockAdapters } from "./adapters/sourceConfig";
+import { allRegions } from "./config/regions";
 import type { createRepositories } from "./db/repositories";
 import { refreshAll } from "./jobs/refreshAll";
 
@@ -11,9 +12,13 @@ export function shouldSeedMockData(env: Environment): boolean {
 }
 
 export function runtimeAdapters(env: Environment): SourceAdapter[] {
+  const regionAdapters = allRegions().flatMap((region) =>
+    adaptersForRegion(region.id),
+  );
+  const all = [...globalAdapters(), ...regionAdapters];
   return shouldSeedMockData(env)
-    ? [...mockAdapters(), ...activeAdapters()]
-    : activeAdapters();
+    ? [...mockAdapters(), ...all]
+    : all;
 }
 
 export function registerAdapterSources(

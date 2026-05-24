@@ -41,9 +41,12 @@ export function adaptersForRegion(regionId?: string): SourceAdapter[] {
   return [
     createHomesNzAdapter({ region }),
     createRealestateAdapter({ region }),
-    createEducationCountsAdapter(),
     ...councilAdaptersForRegion(region),
   ];
+}
+
+export function globalAdapters(): SourceAdapter[] {
+  return [createEducationCountsAdapter()];
 }
 
 function councilAdaptersForRegion(region: RegionConfig): SourceAdapter[] {

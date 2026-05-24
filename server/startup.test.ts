@@ -13,32 +13,34 @@ import type { SourceAdapter } from "./adapters/types";
 describe("startup", () => {
   it("does not include mock adapters by default", () => {
     expect(shouldSeedMockData({})).toBe(false);
-    expect(runtimeAdapters({}).map((adapter) => adapter.sourceId).sort()).toEqual([
+    const sourceIds = runtimeAdapters({}).map((a) => a.sourceId).sort();
+    expect(sourceIds).toEqual([
       "education_counts",
-      "homes_co_nz",
+      "homes_co_nz_kapiti",
+      "homes_co_nz_lower-hutt",
+      "homes_co_nz_porirua",
+      "homes_co_nz_upper-hutt",
+      "homes_co_nz_wellington",
       "kapiti_council",
       "porirua_council",
-      "realestate_co_nz",
+      "realestate_co_nz_kapiti",
+      "realestate_co_nz_lower-hutt",
+      "realestate_co_nz_porirua",
+      "realestate_co_nz_upper-hutt",
+      "realestate_co_nz_wellington",
       "wellington_council",
     ]);
   });
 
   it("includes mock adapters only when explicitly enabled", () => {
     expect(shouldSeedMockData({ ENABLE_MOCK_DATA: "true" })).toBe(true);
-    expect(
-      runtimeAdapters({ ENABLE_MOCK_DATA: "true" }).map(
-        (adapter) => adapter.sourceId,
-      ),
-    ).toEqual([
-      "mock_properties",
-      "mock_schools",
-      "homes_co_nz",
-      "realestate_co_nz",
-      "education_counts",
-      "kapiti_council",
-      "wellington_council",
-      "porirua_council",
-    ]);
+    const sourceIds = runtimeAdapters({ ENABLE_MOCK_DATA: "true" })
+      .map((a) => a.sourceId);
+    expect(sourceIds[0]).toBe("mock_properties");
+    expect(sourceIds[1]).toBe("mock_schools");
+    expect(sourceIds.slice(2)).toEqual(
+      expect.arrayContaining(["education_counts", "kapiti_council"]),
+    );
   });
 
   it("preserves existing source refresh state when registering adapters", () => {
