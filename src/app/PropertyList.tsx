@@ -326,8 +326,12 @@ export function PropertyList({
 
 function parsePrice(price: string | null): number | null {
   if (price === null) return null;
-  const digits = price.replace(/[^0-9]/g, "");
-  const num = parseInt(digits, 10);
+  const cleaned = price.replace(/[$,\s]/g, "").toUpperCase();
+  const mMatch = cleaned.match(/^([\d.]+)M$/);
+  if (mMatch) return parseFloat(mMatch[1]) * 1_000_000;
+  const kMatch = cleaned.match(/^([\d.]+)K$/);
+  if (kMatch) return parseFloat(kMatch[1]) * 1_000;
+  const num = parseFloat(cleaned.replace(/[^0-9.]/g, ""));
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
