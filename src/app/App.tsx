@@ -23,7 +23,7 @@ import {
 import type { Source } from "../lib/types";
 import { parsePrice, median } from "../lib/analysis";
 
-type Page = "main" | "schools" | "sources";
+type Page = "main" | "analytics" | "schools" | "sources";
 
 export function App() {
   const [page, setPage] = useState<Page>("main");
@@ -42,7 +42,6 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const propertiesRef = useRef<HTMLElement>(null);
-  const analyticsRef = useRef<HTMLElement>(null);
 
   const loadData = useCallback(async (regionId: string) => {
     setLoading(true);
@@ -128,19 +127,9 @@ export function App() {
     };
   }, [properties, suburbs]);
 
-  const scrollTo = (ref: React.RefObject<HTMLElement | null>) => {
-    ref.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleNavClick = (target: Page | "analytics") => {
-    if (target === "schools" || target === "sources") {
-      setPage(target);
-      setSelectedPropertyId(null);
-      window.scrollTo({ top: 0 });
-    } else if (target === "analytics") {
-      setPage("main");
-      setTimeout(() => scrollTo(analyticsRef), 50);
-    }
+  const handlePageChange = (target: Page) => {
+    setPage(target);
+    window.scrollTo({ top: 0 });
   };
 
   return (
@@ -173,25 +162,25 @@ export function App() {
             )}
             <button
               className={`nav-link ${page === "main" ? "active" : ""}`}
-              onClick={() => handleNavClick("analytics")}
+              onClick={() => handlePageChange("main")}
             >
               Properties
             </button>
             <button
-              className={`nav-link ${page === "main" ? "active" : ""}`}
-              onClick={() => handleNavClick("analytics")}
+              className={`nav-link ${page === "analytics" ? "active" : ""}`}
+              onClick={() => handlePageChange("analytics")}
             >
               Analytics
             </button>
             <button
               className={`nav-link ${page === "schools" ? "active" : ""}`}
-              onClick={() => handleNavClick("schools")}
+              onClick={() => handlePageChange("schools")}
             >
               Schools
             </button>
             <button
               className={`nav-link ${page === "sources" ? "active" : ""}`}
-              onClick={() => handleNavClick("sources")}
+              onClick={() => handlePageChange("sources")}
             >
               Sources
             </button>
@@ -271,16 +260,16 @@ export function App() {
                 </section>
               )}
             </div>
-
-            {!loading && !error && (
-              <section className="analytics-section-wrapper" ref={analyticsRef}>
-                <div className="container">
-                  <h2>Analytics</h2>
-                  <PropertyAnalytics properties={properties} />
-                </div>
-              </section>
-            )}
           </>
+        )}
+
+        {page === "analytics" && (
+          <section className="analytics-section-wrapper">
+            <div className="container">
+              <h2>Analytics</h2>
+              <PropertyAnalytics properties={properties} />
+            </div>
+          </section>
         )}
 
         {page === "schools" && (
