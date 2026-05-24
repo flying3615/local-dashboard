@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { SourceAdapter } from "../adapters/types";
 import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
-import { getRegion } from "../config/regions";
+import { getRegion, allRegions } from "../config/regions";
 import type { Item, School, SchoolEvent, Source } from "../domain/types";
 import type { createRepositories } from "../db/repositories";
 import { linkItem } from "../pipeline/link";
@@ -16,6 +16,17 @@ import { tagItem } from "../pipeline/tag";
 type Repositories = ReturnType<typeof createRepositories>;
 
 const STALE_ITEM_THRESHOLD_DAYS = 7;
+
+const regionIds = new Set(allRegions().map((r) => r.id));
+
+function regionFromAdapter(adapter: SourceAdapter): string {
+  for (const id of regionIds) {
+    if (adapter.sourceId.endsWith(`_${id}`) || adapter.sourceId === `${id}_council`) {
+      return id;
+    }
+  }
+  return "kapiti";
+}
 
 export interface RefreshAllOptions {
   repositories: Repositories;
@@ -407,6 +418,7 @@ function normalizeSchoolProfile(
         ? "Has enrolment zone"
         : "No enrolment zone",
   ].filter((part): part is string => part !== null);
+  const region = regionFromAdapter(adapter);
 
   return {
     id: `item_${stableHash(
@@ -426,7 +438,7 @@ function normalizeSchoolProfile(
     tags: getStringArray(raw, "tags"),
     rawSnapshotId,
     lastSeenAt: null,
-    region: "kapiti",
+    region,
   };
 }
 
@@ -439,6 +451,8 @@ function normalizeCouncilNotice(
   const raw = assertRecord(record, adapter.sourceId);
   const sourceUrl = getString(raw, "sourceUrl") ?? source.url;
   const title = requireString(raw, "title", adapter.sourceId);
+  const region = regionFromAdapter(adapter);
+  const regionConfig = getRegion(region);
 
   return {
     id: `item_${stableHash(`${adapter.sourceId}|${sourceUrl}|${title}`)}`,
@@ -447,7 +461,7 @@ function normalizeCouncilNotice(
     summary: getString(raw, "summary") ?? title,
     sourceId: adapter.sourceId,
     sourceUrl,
-    area: getString(raw, "area") ?? "Kāpiti Coast District",
+    area: getString(raw, "area") ?? regionConfig?.name ?? "Greater Wellington",
     address: getString(raw, "address"),
     publishedAt: getString(raw, "publishedAt"),
     startsAt: null,
@@ -456,7 +470,7 @@ function normalizeCouncilNotice(
     tags: getStringArray(raw, "tags"),
     rawSnapshotId,
     lastSeenAt: null,
-    region: "kapiti",
+    region,
   };
 }
 
@@ -494,7 +508,7 @@ function normalizeSchoolEvent(
     tags,
     rawSnapshotId,
     lastSeenAt: null,
-    region: "kapiti",
+    region: regionFromAdapter(adapter),
   };
 }
 
