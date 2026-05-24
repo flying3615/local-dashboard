@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PropertyList } from "./PropertyList";
 import { PropertyDetail } from "./PropertyDetail";
+import { PropertyAnalytics } from "./PropertyAnalytics";
 import { SchoolRadar } from "./SchoolRadar";
 import { Sources } from "./Sources";
 import {
@@ -20,6 +21,7 @@ import {
   type RegionInfo,
 } from "../lib/api";
 import type { Source } from "../lib/types";
+import { parsePrice, median } from "../lib/analysis";
 
 type Page = "main" | "schools" | "sources";
 
@@ -38,6 +40,9 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [suburbFilter, setSuburbFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const propertiesRef = useRef<HTMLElement>(null);
+  const analyticsRef = useRef<HTMLElement>(null);
 
   const loadData = useCallback(async (regionId: string) => {
     setLoading(true);
@@ -88,33 +93,55 @@ export function App() {
 
   const currentRegion = regions.find((r) => r.id === region);
 
-  const suburbs = [...new Set(
-    properties.map((p) => p.property?.suburb ?? p.item.area ?? "Unknown"),
-  )].sort();
+  const suburbs = useMemo(() => {
+    const set = new Set(
+      properties.map((p) => p.property?.suburb ?? p.item.area ?? "Unknown"),
+    );
+    return [...set].sort();
+  }, [properties]);
 
-  const filteredProperties = properties.filter((p) => {
-    const matchesSuburb =
-      suburbFilter === "all" ||
-      (p.property?.suburb ?? p.item.area ?? "Unknown") === suburbFilter;
-    const matchesSearch =
-      !searchQuery ||
-      (p.property?.address ?? p.item.address ?? p.item.title ?? "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-    return matchesSuburb && matchesSearch;
-  });
+  const filteredProperties = useMemo(() => {
+    let result = properties;
+    if (suburbFilter !== "all") {
+      result = result.filter(
+        (p) => (p.property?.suburb ?? p.item.area ?? "Unknown") === suburbFilter,
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((p) => {
+        const addr = (p.property?.address ?? p.item.address ?? p.item.title ?? "").toLowerCase();
+        return addr.includes(q);
+      });
+    }
+    return result;
+  }, [properties, suburbFilter, searchQuery]);
 
-  const totalListings = properties.length;
-  const prices = properties
-    .map((p) => {
-      const priceStr = p.property?.price;
-      if (!priceStr) return null;
-      const num = parseInt(priceStr.replace(/[^0-9]/g, ""), 10);
-      return Number.isFinite(num) && num > 0 ? num : null;
-    })
-    .filter((p): p is number => p !== null)
-    .sort((a, b) => a - b);
-  const medianPrice = prices.length > 0 ? prices[Math.floor(prices.length / 2)] : null;
+  const heroStats = useMemo(() => {
+    const prices = properties
+      .map((p) => (p.property ? parsePrice(p.property.price) : null))
+      .filter((p): p is number => p != null);
+    return {
+      total: properties.length,
+      medianPrice: median(prices),
+      suburbCount: suburbs.length,
+    };
+  }, [properties, suburbs]);
+
+  const scrollTo = (ref: React.RefObject<HTMLElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleNavClick = (target: Page | "analytics") => {
+    if (target === "schools" || target === "sources") {
+      setPage(target);
+      setSelectedPropertyId(null);
+      window.scrollTo({ top: 0 });
+    } else if (target === "analytics") {
+      setPage("main");
+      setTimeout(() => scrollTo(analyticsRef), 50);
+    }
+  };
 
   return (
     <div className="app">
@@ -146,19 +173,25 @@ export function App() {
             )}
             <button
               className={`nav-link ${page === "main" ? "active" : ""}`}
-              onClick={() => setPage("main")}
+              onClick={() => handleNavClick("analytics")}
             >
               Properties
             </button>
             <button
+              className={`nav-link ${page === "main" ? "active" : ""}`}
+              onClick={() => handleNavClick("analytics")}
+            >
+              Analytics
+            </button>
+            <button
               className={`nav-link ${page === "schools" ? "active" : ""}`}
-              onClick={() => setPage("schools")}
+              onClick={() => handleNavClick("schools")}
             >
               Schools
             </button>
             <button
               className={`nav-link ${page === "sources" ? "active" : ""}`}
-              onClick={() => setPage("sources")}
+              onClick={() => handleNavClick("sources")}
             >
               Sources
             </button>
@@ -175,23 +208,37 @@ export function App() {
                   {currentRegion?.name ?? "Wellington"} Property Dashboard
                 </h1>
                 <p className="hero-subtitle">
-                  Monitor property listings across {currentRegion?.name ?? "the region"}
+                  Track listings, analyse market trends, and find the right property in {currentRegion?.name ?? "the region"}.
                 </p>
+                <div className="hero-tags">
+                  {suburbs.slice(0, 6).map((s) => (
+                    <button
+                      key={s}
+                      className={`hero-tag ${suburbFilter === s ? "active" : ""}`}
+                      onClick={() => {
+                        setSuburbFilter(s);
+                        setTimeout(() => scrollTo(propertiesRef), 50);
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
                 <div className="hero-stats">
                   <div className="stat">
-                    <span className="stat-value">{totalListings}</span>
+                    <span className="stat-value">{heroStats.total}</span>
                     <span className="stat-label">Active Listings</span>
                   </div>
-                  {medianPrice && (
+                  {heroStats.medianPrice != null && (
                     <div className="stat">
                       <span className="stat-value">
-                        ${(medianPrice / 1000).toFixed(0)}k
+                        ${heroStats.medianPrice.toLocaleString()}
                       </span>
                       <span className="stat-label">Median Price</span>
                     </div>
                   )}
                   <div className="stat">
-                    <span className="stat-value">{suburbs.length}</span>
+                    <span className="stat-value">{heroStats.suburbCount}</span>
                     <span className="stat-label">Suburbs</span>
                   </div>
                 </div>
@@ -207,21 +254,32 @@ export function App() {
                 </div>
               )}
               {!loading && !error && (
-                <PropertyList
-                  properties={filteredProperties}
-                  allProperties={properties}
-                  searchLinks={searchLinks}
-                  officialRecords={officialRecords}
-                  onSearchOfficialRecords={handleSearchOfficialRecords}
-                  onSelectProperty={setSelectedPropertyId}
-                  suburbFilter={suburbFilter}
-                  onSuburbFilterChange={setSuburbFilter}
-                  searchQuery={searchQuery}
-                  onSearchQueryChange={setSearchQuery}
-                  suburbs={suburbs}
-                />
+                <section ref={propertiesRef}>
+                  <PropertyList
+                    properties={filteredProperties}
+                    allProperties={properties}
+                    searchLinks={searchLinks}
+                    officialRecords={officialRecords}
+                    onSearchOfficialRecords={handleSearchOfficialRecords}
+                    onSelectProperty={setSelectedPropertyId}
+                    suburbFilter={suburbFilter}
+                    onSuburbFilterChange={setSuburbFilter}
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                    suburbs={suburbs}
+                  />
+                </section>
               )}
             </div>
+
+            {!loading && !error && (
+              <section className="analytics-section-wrapper" ref={analyticsRef}>
+                <div className="container">
+                  <h2>Analytics</h2>
+                  <PropertyAnalytics properties={properties} />
+                </div>
+              </section>
+            )}
           </>
         )}
 
