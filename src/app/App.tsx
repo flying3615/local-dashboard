@@ -132,6 +132,10 @@ export function App() {
     window.scrollTo({ top: 0 });
   };
 
+  const scrollToRef = (ref: React.RefObject<HTMLElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="app">
       <nav className="nav">
@@ -206,7 +210,7 @@ export function App() {
                       className={`hero-tag ${suburbFilter === s ? "active" : ""}`}
                       onClick={() => {
                         setSuburbFilter(s);
-                        setTimeout(() => scrollTo(propertiesRef), 50);
+                        setTimeout(() => scrollToRef(propertiesRef), 50);
                       }}
                     >
                       {s}
