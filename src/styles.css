@@ -1188,11 +1188,66 @@ section.band-section {
 }
 
 .error-cell {
-  color: var(--danger);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.source-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.source-region-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--fg-2);
+  border: 1px solid var(--border-soft);
+  text-transform: capitalize;
+}
+
+.source-region-chip--error {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.source-region-chip--disabled {
+  opacity: 0.4;
+}
+
+.source-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.source-status-badge--ok {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.source-status-badge--error {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+}
+
+.source-status-badge--disabled {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.source-refresh-group {
+  display: flex;
+  gap: 4px;
 }
 
 /* ---- Refresh Controls ---- */

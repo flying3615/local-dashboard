@@ -32,11 +32,11 @@ describe("Sources", () => {
     expect(screen.getByText("Mock Properties")).toBeInTheDocument();
     expect(screen.getByText("property_platform")).toBeInTheDocument();
     expect(screen.getByText("platform")).toBeInTheDocument();
-    expect(screen.getByText("Enabled")).toBeInTheDocument();
+    expect(screen.getByText("OK")).toBeInTheDocument();
     expect(screen.queryByText("Never")).not.toBeInTheDocument();
   });
 
-  it("shows disabled and error state", () => {
+  it("shows error state", () => {
     render(
       <Sources
         sources={[
@@ -49,9 +49,8 @@ describe("Sources", () => {
       />,
     );
 
-    expect(screen.getByText("Disabled")).toBeInTheDocument();
     expect(screen.getByText("Never")).toBeInTheDocument();
-    expect(screen.getByText("Connection refused")).toBeInTheDocument();
+    expect(screen.getByText("Error")).toBeInTheDocument();
   });
 
   it("renders refresh button for each source", () => {
@@ -62,5 +61,21 @@ describe("Sources", () => {
     render(<Sources sources={[makeSource()]} />);
 
     expect(screen.getByRole("button", { name: /Refresh/ })).toBeInTheDocument();
+  });
+
+  it("groups sources by name", () => {
+    render(
+      <Sources
+        sources={[
+          makeSource({ id: "homes_co_nz_kapiti", name: "homes.co.nz" }),
+          makeSource({ id: "homes_co_nz_wellington", name: "homes.co.nz" }),
+        ]}
+      />,
+    );
+
+    const rows = screen.getAllByText("homes.co.nz");
+    expect(rows).toHaveLength(1);
+    expect(screen.getByText("kapiti")).toBeInTheDocument();
+    expect(screen.getByText("wellington")).toBeInTheDocument();
   });
 });
