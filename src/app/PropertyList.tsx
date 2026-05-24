@@ -23,6 +23,8 @@ import type {
   PropertyWithItem,
 } from "../lib/api";
 
+type SortOrder = "default" | "price-asc" | "price-desc";
+
 interface PropertyListProps {
   properties: PropertyWithItem[];
   allProperties: PropertyWithItem[];
@@ -55,6 +57,26 @@ export function PropertyList({
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("default");
+  const [bedroomFilter, setBedroomFilter] = useState<number | null>(null);
+
+  const availableBedrooms = [...new Set(
+    allProperties.map((p) => p.property?.bedrooms ?? null).filter((b): b is number => b !== null)
+  )].sort((a, b) => a - b);
+
+  const filteredProperties = bedroomFilter === null
+    ? properties
+    : properties.filter((p) => p.property?.bedrooms === bedroomFilter);
+
+  const sortedProperties = [...filteredProperties].sort((a, b) => {
+    if (sortOrder === "default") return 0;
+    const priceA = parsePrice(a.property?.price ?? null);
+    const priceB = parsePrice(b.property?.price ?? null);
+    if (priceA === null && priceB === null) return 0;
+    if (priceA === null) return 1;
+    if (priceB === null) return -1;
+    return sortOrder === "price-asc" ? priceA - priceB : priceB - priceA;
+  });
 
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault();
@@ -177,15 +199,36 @@ export function PropertyList({
         })}
       </div>
 
-      {/* Search input */}
-      <div style={{ marginBottom: "var(--space-4)" }}>
+      {/* Bedroom filter */}
+      {availableBedrooms.length > 0 && (
+        <div className="filters" style={{ marginTop: "var(--space-2)" }}>
+          <button
+            className={`filter-chip ${bedroomFilter === null ? "active" : ""}`}
+            onClick={() => setBedroomFilter(null)}
+          >
+            Any beds
+          </button>
+          {availableBedrooms.map((n) => (
+            <button
+              key={n}
+              className={`filter-chip ${bedroomFilter === n ? "active" : ""}`}
+              onClick={() => setBedroomFilter(n)}
+            >
+              {n} bed
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Search input + sort */}
+      <div style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-4)", alignItems: "center", flexWrap: "wrap" }}>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
           placeholder="Search by address..."
           style={{
-            width: "100%",
+            flex: "1 1 200px",
             maxWidth: 360,
             border: "1px solid var(--border)",
             borderRadius: "var(--radius-sm)",
@@ -194,14 +237,32 @@ export function PropertyList({
             fontSize: "var(--text-sm)",
           }}
         />
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+          style={{
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+            padding: "var(--space-2) var(--space-3)",
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--text-sm)",
+            background: "var(--surface)",
+            color: "var(--fg)",
+            cursor: "pointer",
+          }}
+        >
+          <option value="default">Sort: Default</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+        </select>
       </div>
 
       {/* Property grid */}
-      {properties.length === 0 ? (
+      {sortedProperties.length === 0 ? (
         <p className="empty-state">No properties match the current filter.</p>
       ) : (
         <div className="property-grid">
-          {properties.map(({ item, property }) => (
+          {sortedProperties.map(({ item, property }) => (
             <article
               key={item.id}
               className="card"
@@ -261,6 +322,13 @@ export function PropertyList({
     </div>
   );
 
+}
+
+function parsePrice(price: string | null): number | null {
+  if (price === null) return null;
+  const digits = price.replace(/[^0-9]/g, "");
+  const num = parseInt(digits, 10);
+  return Number.isFinite(num) && num > 0 ? num : null;
 }
 
 function formatCurrency(value: number | null): string {
