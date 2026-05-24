@@ -250,7 +250,7 @@ export function App() {
           tabIndex={-1}
         >
           <div
-            className="modal-content"
+            className="modal"
             onClick={(e) => e.stopPropagation()}
           >
             <button
