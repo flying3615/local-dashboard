@@ -4,8 +4,7 @@ import type { SourceAdapter } from "../adapters/types";
 import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
 import { getRegion, allRegions } from "../config/regions";
-import type { Item, School, SchoolEvent, Source } from "../domain/types";
-import type { createRepositories } from "../db/repositories";
+import type { Item, ItemLink, ItemType, Note, PropertyListing, RawSnapshot, School, SchoolEvent, Source } from "../domain/types";
 import { linkItem } from "../pipeline/link";
 import {
   normalizePropertyListing,
@@ -13,7 +12,43 @@ import {
 } from "../pipeline/normalize";
 import { tagItem } from "../pipeline/tag";
 
-type Repositories = ReturnType<typeof createRepositories>;
+type MaybeAsync<T> = T | Promise<T>;
+
+export interface RefreshRepositories {
+  transaction<T>(work: () => T): T | Promise<T>;
+  sources: {
+    upsert(source: Source): MaybeAsync<Source>;
+    get(id: string): MaybeAsync<Source | null>;
+  };
+  rawSnapshots: {
+    insert(snapshot: RawSnapshot): MaybeAsync<RawSnapshot>;
+  };
+  items: {
+    upsert(item: Item): MaybeAsync<Item>;
+    list(filters?: { type?: ItemType; region?: string }): MaybeAsync<Item[]>;
+    deleteStale(sourceId: string, olderThanIso: string): MaybeAsync<number>;
+  };
+  properties: {
+    upsert(property: PropertyListing): MaybeAsync<PropertyListing>;
+    list(): MaybeAsync<PropertyListing[]>;
+  };
+  itemLinks: {
+    upsert(link: ItemLink): MaybeAsync<ItemLink>;
+  };
+  schools: {
+    upsert(school: School): MaybeAsync<School>;
+    list(): MaybeAsync<School[]>;
+    get(id: string): MaybeAsync<School | null>;
+  };
+  schoolEvents: {
+    upsert(event: SchoolEvent): MaybeAsync<SchoolEvent>;
+  };
+  notes: {
+    upsert(note: Note): MaybeAsync<Note>;
+  };
+}
+
+type Repositories = RefreshRepositories;
 
 const STALE_ITEM_THRESHOLD_DAYS = 7;
 
@@ -52,8 +87,8 @@ export async function refreshAll({
 
   for (const adapter of adapters) {
     const fetchedAt = now();
-    const existingSource = repositories.sources.get(adapter.sourceId);
-    const source = upsertAdapterSource(repositories, adapter, existingSource);
+    const existingSource = await repositories.sources.get(adapter.sourceId);
+    const source = await upsertAdapterSource(repositories, adapter, existingSource);
 
     if (!source.enabled) {
       results.push({
@@ -76,16 +111,22 @@ export async function refreshAll({
     try {
       const records = await adapter.fetch();
 
-      repositories.transaction(() => {
+      // Pre-read existing data for merge functions (needed for D1 async compatibility)
+      const existingItems = await repositories.items.list();
+      const existingProperties = await repositories.properties.list();
+      const existingSchools = await repositories.schools.list();
+
+      await repositories.transaction(() => {
         for (const [index, record] of records.entries()) {
-          const snapshot = repositories.rawSnapshots.insert({
+          const snapshot: RawSnapshot = {
             id: createSnapshotId(adapter.sourceId, fetchedAt, index, record),
             sourceId: adapter.sourceId,
             fetchedAt,
             url: getRecordUrl(record) ?? source.url,
             contentHash: hashJson(record),
             rawPayload: record,
-          });
+          };
+          repositories.rawSnapshots.insert(snapshot);
 
           const item = upsertNormalizedRecord(
             repositories,
@@ -94,6 +135,9 @@ export async function refreshAll({
             record,
             snapshot.id,
             fetchedAt,
+            existingItems,
+            existingProperties,
+            existingSchools,
           );
 
           for (const link of linkItem(item, { sources: [source] })) {
@@ -120,7 +164,7 @@ export async function refreshAll({
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      repositories.sources.upsert({
+      await repositories.sources.upsert({
         ...source,
         lastError: message,
       });
@@ -140,7 +184,7 @@ function upsertAdapterSource(
   repositories: Repositories,
   adapter: SourceAdapter,
   existingSource: Source | null,
-): Source {
+): MaybeAsync<Source> {
   return repositories.sources.upsert({
     id: adapter.sourceId,
     name: adapter.source.name,
@@ -180,6 +224,9 @@ function upsertNormalizedRecord(
   record: unknown,
   rawSnapshotId: string,
   fetchedAt: string,
+  existingItems: Item[],
+  existingProperties: PropertyListing[],
+  existingSchools: School[],
 ): Item {
   switch (adapter.recordType) {
     case "property_listing": {
@@ -193,16 +240,16 @@ function upsertNormalizedRecord(
         { fetchedAt },
       );
       const item = {
-        ...mergeExistingItemState(repositories, tagItem(normalized.item)),
+        ...mergeExistingItemState(existingItems, tagItem(normalized.item)),
         lastSeenAt: fetchedAt,
       };
       const property = mergeExistingPropertyState(
-        repositories,
+        existingProperties,
         normalized.property,
       );
-      const savedItem = repositories.items.upsert(item);
+      repositories.items.upsert(item);
       repositories.properties.upsert(property);
-      return savedItem;
+      return item;
     }
 
     case "school_event": {
@@ -214,18 +261,18 @@ function upsertNormalizedRecord(
       );
       const item = {
         ...mergeExistingItemState(
-          repositories,
+          existingItems,
           tagSchoolEvent(normalizedItem),
         ),
         lastSeenAt: fetchedAt,
       };
-      const savedItem = repositories.items.upsert(item);
-      const school = createSchoolFromEventRecord(record, savedItem);
-      const savedSchool = repositories.schools.upsert(school);
+      repositories.items.upsert(item);
+      const school = createSchoolFromEventRecord(record, item);
+      repositories.schools.upsert(school);
       repositories.schoolEvents.upsert(
-        createSchoolEventFromItem(record, savedSchool.id, savedItem),
+        createSchoolEventFromItem(record, school.id, item),
       );
-      return savedItem;
+      return item;
     }
 
     case "school_profile": {
@@ -237,30 +284,31 @@ function upsertNormalizedRecord(
       );
       const item = {
         ...mergeExistingItemState(
-          repositories,
+          existingItems,
           tagSchoolEvent(normalizedItem),
         ),
         lastSeenAt: fetchedAt,
       };
-      const savedItem = repositories.items.upsert(item);
+      repositories.items.upsert(item);
       repositories.schools.upsert(
         mergeExistingSchoolState(
-          repositories,
-          createSchoolFromProfileRecord(record, savedItem),
+          existingSchools,
+          createSchoolFromProfileRecord(record, item),
         ),
       );
-      return savedItem;
+      return item;
     }
 
     case "council_notice": {
       const item = {
         ...mergeExistingItemState(
-          repositories,
+          existingItems,
           normalizeCouncilNotice(record, adapter, source, rawSnapshotId),
         ),
         lastSeenAt: fetchedAt,
       };
-      return repositories.items.upsert(item);
+      repositories.items.upsert(item);
+      return item;
     }
 
     default:
@@ -268,22 +316,16 @@ function upsertNormalizedRecord(
   }
 }
 
-function mergeExistingItemState(repositories: Repositories, item: Item): Item {
-  const existing = repositories
-    .items
-    .list()
-    .find((candidate) => candidate.id === item.id);
+function mergeExistingItemState(existingItems: Item[], item: Item): Item {
+  const existing = existingItems.find((candidate) => candidate.id === item.id);
   return existing ? { ...item, status: existing.status } : item;
 }
 
 function mergeExistingPropertyState(
-  repositories: Repositories,
+  existingProperties: PropertyListing[],
   property: ReturnType<typeof normalizePropertyListing>["property"],
 ): ReturnType<typeof normalizePropertyListing>["property"] {
-  const existing = repositories
-    .properties
-    .list()
-    .find((candidate) => candidate.itemId === property.itemId);
+  const existing = existingProperties.find((candidate) => candidate.itemId === property.itemId);
 
   return existing
     ? {
@@ -358,10 +400,10 @@ function createSchoolFromProfileRecord(record: unknown, item: Item): School {
 }
 
 function mergeExistingSchoolState(
-  repositories: Repositories,
+  existingSchools: School[],
   school: School,
 ): School {
-  const existing = repositories.schools.list().find((candidate) => {
+  const existing = existingSchools.find((candidate) => {
     return (
       candidate.id === school.id ||
       candidate.name.toLocaleLowerCase() === school.name.toLocaleLowerCase()

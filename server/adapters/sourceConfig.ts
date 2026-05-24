@@ -9,6 +9,9 @@ import { createHomesNzAdapter } from "./homesNz";
 import { createMockPropertyAdapter } from "./mockProperties";
 import { createMockSchoolAdapter } from "./mockSchools";
 import { getRegion, defaultRegion, type RegionConfig } from "../config/regions";
+import type { SitemapCache, PropertyCache, HomesNzAdapterOptions } from "./homesNz";
+import type { RealestateCache, RealestateAdapterOptions } from "./realestate";
+import type { CacheStore } from "./cacheStore";
 
 export type AdapterStatus = "active" | "not_implemented" | "disabled";
 
@@ -35,12 +38,28 @@ export function activeAdapters(): SourceAdapter[] {
     .map((ca) => ca.adapter);
 }
 
-export function adaptersForRegion(regionId?: string): SourceAdapter[] {
+export interface AdapterCacheOptions {
+  sitemapCacheStore?: CacheStore<SitemapCache>;
+  propertyCacheStore?: CacheStore<PropertyCache>;
+  realestateCacheStore?: CacheStore<RealestateCache>;
+}
+
+export function adaptersForRegion(
+  regionId?: string,
+  cacheOptions?: AdapterCacheOptions,
+): SourceAdapter[] {
   const region: RegionConfig = (regionId ? getRegion(regionId) : undefined) ?? defaultRegion();
 
+  const homesOpts: HomesNzAdapterOptions = { region };
+  if (cacheOptions?.sitemapCacheStore) homesOpts.sitemapCacheStore = cacheOptions.sitemapCacheStore;
+  if (cacheOptions?.propertyCacheStore) homesOpts.propertyCacheStore = cacheOptions.propertyCacheStore;
+
+  const realestateOpts: RealestateAdapterOptions = { region };
+  if (cacheOptions?.realestateCacheStore) realestateOpts.cacheStore = cacheOptions.realestateCacheStore;
+
   return [
-    createHomesNzAdapter({ region }),
-    createRealestateAdapter({ region }),
+    createHomesNzAdapter(homesOpts),
+    createRealestateAdapter(realestateOpts),
     ...councilAdaptersForRegion(region),
   ];
 }

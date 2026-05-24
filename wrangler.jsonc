@@ -3,6 +3,7 @@
   "name": "paraparaumu-dashboard",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-05-21",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -15,5 +16,8 @@
       "database_name": "paraparaumu-dashboard",
       "database_id": "e67c12fa-0a37-47f4-bee3-414a20a6e3e6"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": ["0 1 * * *"]
+  }
 }

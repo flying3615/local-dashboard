@@ -5,7 +5,7 @@ import { createMockPropertyAdapter } from "../adapters/mockProperties";
 import { createMockSchoolAdapter } from "../adapters/mockSchools";
 import { createInMemoryDatabase } from "../db/database";
 import { createRepositories } from "../db/repositories";
-import { refreshAll } from "./refreshAll";
+import { refreshAll, type RefreshRepositories } from "./refreshAll";
 
 describe("refreshAll", () => {
   const dbs = new Set<ReturnType<typeof createInMemoryDatabase>>();
@@ -242,6 +242,64 @@ describe("refreshAll", () => {
       }),
     ]);
     expect(repos.items.list({ type: "school_event" })).toHaveLength(1);
+  });
+
+  it("awaits async source writes outside transactions", async () => {
+    let persistedLastError: string | null | undefined;
+    const sourceWrites: string[] = [];
+    const repos = {
+      transaction(work) {
+        return work();
+      },
+      sources: {
+        async get() {
+          return null;
+        },
+        async upsert(source) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          sourceWrites.push(source.lastError ?? "ok");
+          persistedLastError = source.lastError;
+          return source;
+        },
+      },
+      rawSnapshots: { insert: () => { throw new Error("unused"); } },
+      items: {
+        upsert: () => { throw new Error("unused"); },
+        list: () => [],
+        deleteStale: () => 0,
+      },
+      properties: {
+        upsert: () => { throw new Error("unused"); },
+        list: () => [],
+      },
+      itemLinks: { upsert: () => { throw new Error("unused"); } },
+      schools: {
+        upsert: () => { throw new Error("unused"); },
+        list: () => [],
+        get: () => null,
+      },
+      schoolEvents: { upsert: () => { throw new Error("unused"); } },
+      notes: { upsert: () => { throw new Error("unused"); } },
+    } satisfies RefreshRepositories;
+    const adapter: SourceAdapter = {
+      ...createMockPropertyAdapter(),
+      async fetch() {
+        throw new Error("Async failure");
+      },
+    };
+
+    const result = await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      now: () => "2026-05-17T00:00:00.000Z",
+    });
+
+    expect(result[0]).toMatchObject({
+      status: "error",
+      error: "Async failure",
+    });
+    expect(persistedLastError).toBe("Async failure");
+    expect(sourceWrites).toEqual(["ok", "Async failure"]);
   });
 
   it("rolls back adapter records when normalization fails", async () => {

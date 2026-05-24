@@ -319,9 +319,11 @@ export function App() {
         </div>
       )}
 
-      <footer className="footer">
-        <div className="container">
-          <p>{currentRegion?.name ?? "Wellington"} Property Dashboard</p>
+      <footer className="app-footer">
+        <div className="footer-inner">
+          <div className="footer-bottom">
+            <p>{currentRegion?.name ?? "Wellington"} Property Dashboard</p>
+          </div>
         </div>
       </footer>
     </div>

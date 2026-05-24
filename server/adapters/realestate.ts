@@ -1,6 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-
+import { createNoopCacheStore, type CacheStore } from "./cacheStore";
 import type { SourceAdapter } from "./types";
 import type { RawPropertyListing } from "../pipeline/normalize";
 import type { RegionConfig } from "../config/regions";
@@ -66,14 +64,9 @@ export interface RealestateCache {
   listings: Record<string, string>;
 }
 
-export interface RealestateCacheStore {
-  read(): Promise<RealestateCache | null>;
-  write(cache: RealestateCache): Promise<void>;
-}
-
 export interface RealestateAdapterOptions {
   fetchImpl?: FetchImpl;
-  cacheStore?: RealestateCacheStore;
+  cacheStore?: CacheStore<RealestateCache>;
   maxListingsPerFetch?: number;
   throttleMs?: number;
   now?: () => string;
@@ -89,7 +82,7 @@ export function createRealestateAdapter(
   const cachePath = region ? `data/realestate-cache-${region.id}.json` : "data/realestate-cache.json";
   const sitemapFilter = region?.realestateSitemapFilter ?? "paraparaumu";
   const regionPath = region?.realestatePath ?? "wellington/kapiti-coast/paraparaumu";
-  const cacheStore = options.cacheStore ?? createFileCacheStore(cachePath);
+  const cacheStore = options.cacheStore ?? createNoopCacheStore<RealestateCache>();
   const maxListingsPerFetch = options.maxListingsPerFetch ?? 20;
   const throttleMs = options.throttleMs ?? 500;
   const now = options.now ?? (() => new Date().toISOString());
@@ -266,23 +259,6 @@ function mergeCache(
   return {
     fetchedAt,
     listings,
-  };
-}
-
-function createFileCacheStore(path: string): RealestateCacheStore {
-  return {
-    async read() {
-      try {
-        const raw = readFileSync(path, "utf-8");
-        return JSON.parse(raw) as RealestateCache;
-      } catch {
-        return null;
-      }
-    },
-    async write(cache) {
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, JSON.stringify(cache), "utf-8");
-    },
   };
 }
 

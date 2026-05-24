@@ -1,0 +1,1791 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>家察 · 本地房产与区域信息咨询</title>
+  <meta name="description" content="个人用户的本地房产展示与区域数据分析平台" />
+
+  <!-- Apple design system tokens -->
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f5f5f7;
+      --surface-warm: #fbfbfd;
+
+      --fg: #1d1d1f;
+      --fg-2: #424245;
+      --muted: #6e6e73;
+      --meta: #86868b;
+
+      --border: #d2d2d7;
+      --border-soft: #e8e8ed;
+
+      --accent: #0071e3;
+      --accent-on: #ffffff;
+      --accent-hover: #0077ed;
+      --accent-active: #0066cc;
+
+      --success: #16a34a;
+      --warn: #eab308;
+      --danger: #dc2626;
+
+      --font-display: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-body: "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+
+      --text-xs: 12px;
+      --text-sm: 14px;
+      --text-base: 17px;
+      --text-lg: 21px;
+      --text-xl: 28px;
+      --text-2xl: 40px;
+      --text-3xl: 56px;
+      --text-4xl: 80px;
+
+      --leading-body: 1.47;
+      --leading-tight: 1.05;
+      --tracking-display: -0.015em;
+
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-12: 48px;
+
+      --section-y-desktop: 100px;
+      --section-y-tablet: 64px;
+      --section-y-phone: 40px;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-pill: 980px;
+
+      --elev-flat: none;
+      --elev-ring: 0 0 0 1px var(--border);
+      --elev-raised: 0 12px 32px rgba(0,0,0,0.08);
+
+      --focus-ring: 0 0 0 4px color-mix(in oklab, var(--accent), transparent 65%);
+
+      --motion-fast: 150ms;
+      --motion-base: 220ms;
+      --ease-standard: cubic-bezier(0.28, 0, 0.22, 1);
+
+      --container-max: 1200px;
+      --container-gutter-desktop: 22px;
+      --container-gutter-tablet: 18px;
+      --container-gutter-phone: 16px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: var(--leading-body);
+      font-weight: 400;
+      letter-spacing: -0.022em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────── */
+    .container {
+      max-width: var(--container-max);
+      margin-inline: auto;
+      padding-inline: var(--container-gutter-desktop);
+    }
+    section { padding-block: var(--section-y-desktop); }
+    .band-light { background: var(--bg); color: var(--fg); }
+    .band-soft  { background: var(--surface); color: var(--fg); }
+    .band-dark  { background: #000; color: #f5f5f7; }
+    @media (max-width: 1023px) {
+      .container { padding-inline: var(--container-gutter-tablet); }
+      section { padding-block: var(--section-y-tablet); }
+    }
+    @media (max-width: 639px) {
+      .container { padding-inline: var(--container-gutter-phone); }
+      section { padding-block: var(--section-y-phone); }
+    }
+
+    /* ─── Typography ─────────────────────────────────────── */
+    h1, h2, h3 { font-family: var(--font-display); margin: 0; color: var(--fg); }
+    h1 {
+      font-size: clamp(36px, 5vw, var(--text-3xl));
+      font-weight: 600;
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-display);
+    }
+    h2 {
+      font-size: clamp(28px, 3.5vw, var(--text-2xl));
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: var(--tracking-display);
+    }
+    h3 {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      line-height: 1.14;
+    }
+    p { margin: 0; }
+
+    .lead {
+      font-size: var(--text-lg);
+      line-height: 1.38;
+      color: var(--fg-2);
+      font-weight: 400;
+    }
+    .body-muted { color: var(--muted); }
+    .body-sm { font-size: var(--text-sm); }
+    .eyebrow {
+      font-family: var(--font-display);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      line-height: 1;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stack-2 > * + * { margin-block-start: var(--space-2); }
+    .stack-3 > * + * { margin-block-start: var(--space-3); }
+    .stack-4 > * + * { margin-block-start: var(--space-4); }
+    .stack-6 > * + * { margin-block-start: var(--space-6); }
+
+    /* ─── Nav ────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: color-mix(in oklab, var(--bg), transparent 20%);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .nav-inner {
+      max-width: var(--container-max);
+      margin-inline: auto;
+      padding-inline: var(--container-gutter-desktop);
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-6);
+    }
+    .nav-brand {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--fg);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .nav-brand svg { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      gap: var(--space-6);
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      align-items: center;
+    }
+    .nav-links a {
+      font-size: var(--text-sm);
+      font-weight: 400;
+      color: var(--fg);
+      letter-spacing: -0.016em;
+      opacity: 0.75;
+      text-decoration: none;
+      transition: opacity var(--motion-fast) var(--ease-standard);
+    }
+    .nav-links a:hover { opacity: 1; }
+    .nav-links a.active { opacity: 1; color: var(--accent); }
+    .nav-search {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--meta);
+      font-size: var(--text-sm);
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: border-color var(--motion-fast) var(--ease-standard);
+      min-width: 180px;
+    }
+    .nav-search:hover { border-color: var(--meta); }
+    .nav-search svg { opacity: 0.5; flex-shrink: 0; }
+    .nav-search span { flex: 1; text-align: left; }
+
+    @media (max-width: 768px) {
+      .nav-inner { padding-inline: var(--container-gutter-phone); }
+      .nav-links { display: none; }
+      .nav-search { min-width: 40px; }
+      .nav-search span { display: none; }
+    }
+
+    /* ─── Buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-weight: 500;
+      font-size: var(--text-sm);
+      line-height: 1.2;
+      cursor: pointer;
+      text-decoration: none;
+      transition:
+        background-color var(--motion-fast) var(--ease-standard),
+        border-color var(--motion-fast) var(--ease-standard),
+        transform var(--motion-fast) var(--ease-standard);
+    }
+    .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-on);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:active { background: var(--accent-active); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--fg);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover { background: var(--surface); border-color: var(--meta); }
+
+    .btn-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-body);
+      font-weight: 400;
+      font-size: var(--text-base);
+      line-height: 1.2;
+      letter-spacing: -0.005em;
+      cursor: pointer;
+      text-decoration: none;
+      background: var(--accent);
+      color: var(--accent-on);
+      transition:
+        background-color var(--motion-fast) var(--ease-standard),
+        transform var(--motion-fast) var(--ease-standard);
+    }
+    .btn-pill:hover { background: var(--accent-hover); }
+    .btn-pill:active { background: var(--accent-active); transform: scale(0.98); }
+    .btn-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+    .btn-pill-dark {
+      background: var(--fg);
+      color: var(--bg);
+    }
+    .btn-pill-dark:hover { background: #333; }
+
+    /* ─── Cards ──────────────────────────────────────────── */
+    .card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow var(--motion-base) var(--ease-standard);
+    }
+    .card:hover { box-shadow: var(--elev-raised); }
+    .card-img {
+      aspect-ratio: 16/10;
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+    .card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .card-body {
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    /* ─── Badges ─────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: 4px var(--space-3);
+      border-radius: var(--radius-pill);
+      font-family: var(--font-body);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .badge-accent {
+      color: var(--accent);
+      background: color-mix(in oklab, var(--accent), transparent 90%);
+    }
+    .badge-success {
+      color: var(--success);
+      background: color-mix(in oklab, var(--accent), transparent 92%);
+    }
+    .badge-muted {
+      color: var(--muted);
+      background: color-mix(in oklab, var(--muted), transparent 88%);
+    }
+    .badge-warn {
+      color: var(--warn);
+      background: color-mix(in oklab, var(--warn), transparent 90%);
+    }
+
+    /* ─── Hero ───────────────────────────────────────────── */
+    .hero {
+      background: #000;
+      color: #f5f5f7;
+      padding-block: clamp(60px, 8vw, 120px);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-content {
+      max-width: 700px;
+      position: relative;
+      z-index: 2;
+    }
+    .hero h1 {
+      color: #f5f5f7;
+      font-size: clamp(40px, 6vw, 64px);
+    }
+    .hero .lead { color: #a1a1a6; }
+    .hero-search {
+      display: flex;
+      gap: var(--space-3);
+      margin-block-start: var(--space-8);
+      max-width: 560px;
+    }
+    .hero-search-input {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius-pill);
+      padding: 12px 20px;
+      backdrop-filter: blur(10px);
+    }
+    .hero-search-input input {
+      background: none;
+      border: none;
+      outline: none;
+      color: #f5f5f7;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      flex: 1;
+      letter-spacing: -0.01em;
+    }
+    .hero-search-input input::placeholder { color: rgba(245,245,247,0.45); }
+    .hero-search-input svg { color: rgba(245,245,247,0.5); flex-shrink: 0; }
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-block-start: var(--space-5);
+    }
+    .hero-tag {
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(245,245,247,0.7);
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--motion-fast) var(--ease-standard);
+      background: none;
+      font-family: var(--font-body);
+    }
+    .hero-tag:hover {
+      border-color: rgba(255,255,255,0.35);
+      color: #f5f5f7;
+      background: rgba(255,255,255,0.06);
+    }
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+      margin-block-start: var(--space-12);
+      padding-block-start: var(--space-8);
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .hero-stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      color: #f5f5f7;
+      letter-spacing: -0.02em;
+    }
+    .hero-stat-label {
+      font-size: var(--text-sm);
+      color: #86868b;
+      margin-block-start: var(--space-1);
+    }
+
+    @media (max-width: 639px) {
+      .hero-search { flex-direction: column; }
+      .hero-stats { grid-template-columns: 1fr; gap: var(--space-4); }
+    }
+
+    /* ─── Stats bar ──────────────────────────────────────── */
+    .stats-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border-soft);
+    }
+    .stat-cell {
+      background: var(--bg);
+      padding: var(--space-6) var(--space-5);
+      text-align: center;
+    }
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      color: var(--fg);
+      letter-spacing: -0.02em;
+    }
+    .stat-label {
+      font-size: var(--text-sm);
+      color: var(--muted);
+      margin-block-start: var(--space-1);
+    }
+    .stat-change {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      margin-block-start: var(--space-1);
+    }
+    .stat-change.up { color: var(--success); }
+    .stat-change.down { color: var(--danger); }
+
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ─── Property grid ──────────────────────────────────── */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-block-end: var(--space-6);
+    }
+    .filter-chip {
+      padding: 7px 16px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg-2);
+      font-size: var(--text-sm);
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all var(--motion-fast) var(--ease-standard);
+    }
+    .filter-chip:hover {
+      border-color: var(--meta);
+      background: var(--surface);
+    }
+    .filter-chip.active {
+      background: var(--accent);
+      color: var(--accent-on);
+      border-color: var(--accent);
+    }
+    .property-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-5);
+    }
+    @media (max-width: 1023px) {
+      .property-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 639px) {
+      .property-grid { grid-template-columns: 1fr; }
+    }
+
+    .price {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: var(--text-xl);
+      color: var(--fg);
+    }
+    .price-unit {
+      font-size: var(--text-sm);
+      font-weight: 400;
+      color: var(--muted);
+    }
+    .property-meta {
+      display: flex;
+      gap: var(--space-4);
+      color: var(--muted);
+      font-size: var(--text-sm);
+    }
+    .property-meta span {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+    .property-location {
+      font-size: var(--text-sm);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+    .property-tag {
+      position: absolute;
+      top: var(--space-3);
+      left: var(--space-3);
+      z-index: 2;
+    }
+
+    /* SVG placeholder for property images */
+    .property-img-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e8e8ed 0%, #d2d2d7 100%);
+    }
+    .property-img-placeholder svg {
+      width: 48px;
+      height: 48px;
+      color: var(--meta);
+      opacity: 0.5;
+    }
+
+    /* ─── Data analysis section ──────────────────────────── */
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-5);
+    }
+    @media (max-width: 1023px) {
+      .analysis-grid { grid-template-columns: 1fr; }
+    }
+    .chart-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+    }
+    .chart-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-block-end: var(--space-5);
+    }
+    .chart-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+    }
+    .chart-tab {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: none;
+      background: none;
+      font-family: var(--font-body);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all var(--motion-fast) var(--ease-standard);
+    }
+    .chart-tab.active {
+      background: var(--bg);
+      color: var(--fg);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .chart-area {
+      height: 260px;
+      position: relative;
+    }
+
+    /* Mini chart canvas */
+    .mini-chart {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Side cards */
+    .side-cards {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+    .info-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .info-card-title {
+      font-weight: 600;
+      font-size: var(--text-base);
+    }
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: var(--space-2) 0;
+    }
+    .info-row + .info-row {
+      border-top: 1px solid var(--border-soft);
+    }
+    .info-row-label {
+      font-size: var(--text-sm);
+      color: var(--fg-2);
+    }
+    .info-row-value {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--fg);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Star rating */
+    .stars {
+      display: flex;
+      gap: 2px;
+      color: var(--accent);
+    }
+    .stars svg { width: 14px; height: 14px; }
+
+    /* Score bar */
+    .score-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .score-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s var(--ease-standard);
+    }
+
+    /* ─── Area comparison ────────────────────────────────── */
+    .area-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-5);
+    }
+    @media (max-width: 1023px) {
+      .area-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 639px) {
+      .area-grid { grid-template-columns: 1fr; }
+    }
+    .area-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      transition: box-shadow var(--motion-base) var(--ease-standard);
+    }
+    .area-card:hover { box-shadow: var(--elev-raised); }
+    .area-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .area-card-name {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 600;
+    }
+    .area-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3);
+    }
+    .area-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .area-metric-label {
+      font-size: var(--text-xs);
+      color: var(--muted);
+    }
+    .area-metric-value {
+      font-family: var(--font-mono);
+      font-size: var(--text-base);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .area-score-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    /* ─── Footer ─────────────────────────────────────────── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border-soft);
+      padding-block: var(--space-12);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: var(--space-8);
+    }
+    @media (max-width: 768px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+    .footer-brand {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      margin-block-end: var(--space-3);
+    }
+    .footer-desc {
+      font-size: var(--text-sm);
+      color: var(--muted);
+      max-width: 300px;
+    }
+    .footer-title {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      margin-block-end: var(--space-3);
+    }
+    .footer-links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .footer-links a {
+      font-size: var(--text-sm);
+      color: var(--muted);
+      text-decoration: none;
+      transition: color var(--motion-fast) var(--ease-standard);
+    }
+    .footer-links a:hover { color: var(--fg); }
+    .footer-bottom {
+      margin-block-start: var(--space-8);
+      padding-block-start: var(--space-6);
+      border-top: 1px solid var(--border);
+      font-size: var(--text-xs);
+      color: var(--meta);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ─── Property detail modal ──────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg);
+      border-radius: var(--radius-lg);
+      max-width: 720px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-5) var(--space-6);
+      border-bottom: 1px solid var(--border-soft);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 1;
+    }
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all var(--motion-fast) var(--ease-standard);
+    }
+    .modal-close:hover { background: var(--surface); }
+    .modal-body { padding: var(--space-6); }
+    .modal-img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #e8e8ed 0%, #d2d2d7 100%);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-block-end: var(--space-6);
+    }
+    .modal-img svg { width: 64px; height: 64px; color: var(--meta); opacity: 0.4; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+    @media (max-width: 639px) {
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: var(--space-3);
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+    }
+    .detail-item-label {
+      font-size: var(--text-xs);
+      color: var(--muted);
+    }
+    .detail-item-value {
+      font-size: var(--text-base);
+      font-weight: 500;
+    }
+
+    /* ─── Trend sparkline (CSS) ──────────────────────────── */
+    .trend-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--text-xs);
+      font-weight: 500;
+    }
+    .trend-indicator.up { color: var(--success); }
+    .trend-indicator.down { color: var(--danger); }
+
+    /* ─── Scrollbar ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+
+<body>
+  <!-- ═══════════ NAV ═══════════ -->
+  <header class="nav">
+    <div class="nav-inner">
+      <span class="nav-brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        家察
+      </span>
+      <nav aria-label="主导航">
+        <ul class="nav-links">
+          <li><a href="#properties" class="active">房产</a></li>
+          <li><a href="#analysis">数据分析</a></li>
+          <li><a href="#areas">区域</a></li>
+          <li><a href="#about">关于</a></li>
+        </ul>
+      </nav>
+      <button class="nav-search" onclick="document.getElementById('hero-search-input').focus()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+        <span>搜索小区、区域…</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ═══════════ HERO ═══════════ -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <p class="eyebrow" style="color: #2997ff">本地房产 · 数据驱动</p>
+          <h1 style="margin-block-start: var(--space-4)">找到你理想的家</h1>
+          <p class="lead" style="margin-block-start: var(--space-4)">
+            覆盖全市二手房、新房源，集成学区评分、通勤分析、<br>房价走势，让每一个置业决策都有数据支撑。
+          </p>
+          <div class="hero-search">
+            <div class="hero-search-input">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input id="hero-search-input" type="text" placeholder="输入小区名、区域或地铁站…" />
+            </div>
+            <button class="btn-pill" onclick="scrollToSection('properties')">
+              搜索
+            </button>
+          </div>
+          <div class="hero-tags">
+            <button class="hero-tag" onclick="setFilter('地铁房')">地铁房</button>
+            <button class="hero-tag" onclick="setFilter('学区房')">学区房</button>
+            <button class="hero-tag" onclick="setFilter('低总价')">低总价</button>
+            <button class="hero-tag" onclick="setFilter('大户型')">大户型</button>
+            <button class="hero-tag" onclick="setFilter('新盘')">新盘</button>
+          </div>
+          <div class="hero-stats">
+            <div>
+              <div class="hero-stat-value" id="stat-listings">12,847</div>
+              <div class="hero-stat-label">在售房源</div>
+            </div>
+            <div>
+              <div class="hero-stat-value" id="stat-avg-price">38,650</div>
+              <div class="hero-stat-label">均价 (元/m²)</div>
+            </div>
+            <div>
+              <div class="hero-stat-value" id="stat-schools">246</div>
+              <div class="hero-stat-label">对口学校</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ MARKET STATS BAR ═══════════ -->
+    <section class="stats-bar" style="padding-block: 0">
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <div class="stat-value">38,650</div>
+          <div class="stat-label">二手房均价 (元/m²)</div>
+          <div class="stat-change up">↑ 2.3% 同比</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-value">42,180</div>
+          <div class="stat-label">新房均价 (元/m²)</div>
+          <div class="stat-change up">↑ 5.1% 同比</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-value">3,421</div>
+          <div class="stat-label">本月成交量</div>
+          <div class="stat-change down">↓ 8.2% 环比</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-value">68</div>
+          <div class="stat-label">平均成交周期 (天)</div>
+          <div class="stat-change down">↓ 5 天</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ PROPERTY LISTINGS ═══════════ -->
+    <section class="band-light" id="properties">
+      <div class="container">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-6); margin-block-end: var(--space-6); flex-wrap: wrap;">
+          <div class="stack-2">
+            <p class="eyebrow">精选房源</p>
+            <h2>热门在售房产</h2>
+          </div>
+          <div class="filters" id="filters" style="margin-block-end: 0;">
+            <button class="filter-chip active" data-filter="all" onclick="filterProperties('all', this)">全部</button>
+            <button class="filter-chip" data-filter="subway" onclick="filterProperties('subway', this)">地铁房</button>
+            <button class="filter-chip" data-filter="school" onclick="filterProperties('school', this)">学区房</button>
+            <button class="filter-chip" data-filter="new" onclick="filterProperties('new', this)">新盘</button>
+            <button class="filter-chip" data-filter="villa" onclick="filterProperties('villa', this)">别墅</button>
+          </div>
+        </div>
+
+        <div class="property-grid" id="property-grid">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ DATA ANALYSIS ═══════════ -->
+    <section class="band-soft" id="analysis">
+      <div class="container">
+        <div class="stack-2" style="margin-block-end: var(--space-8)">
+          <p class="eyebrow">数据分析</p>
+          <h2>区域房价与配套洞察</h2>
+          <p class="lead body-muted" style="max-width: 56ch">基于近 12 个月成交数据和区域信息，帮助你了解每个板块的真实价值。</p>
+        </div>
+
+        <div class="analysis-grid">
+          <!-- Main chart -->
+          <div class="chart-panel">
+            <div class="chart-panel-header">
+              <h3 style="font-size: var(--text-base)">房价走势</h3>
+              <div class="chart-tabs">
+                <button class="chart-tab active" onclick="switchChart('1y', this)">近1年</button>
+                <button class="chart-tab" onclick="switchChart('3y', this)">近3年</button>
+                <button class="chart-tab" onclick="switchChart('5y', this)">近5年</button>
+              </div>
+            </div>
+            <div class="chart-area">
+              <canvas id="priceChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Side info cards -->
+          <div class="side-cards">
+            <!-- School district card -->
+            <div class="info-card">
+              <div class="info-card-title" style="display: flex; align-items: center; gap: var(--space-2);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 10 3 12 0v-5"/>
+                </svg>
+                学区信息
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">对口小学</span>
+                <span class="info-row-value" style="color: var(--accent)">92</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">对口中学</span>
+                <span class="info-row-value" style="color: var(--accent)">78</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">平均评分</span>
+                <span class="info-row-value">
+                  <span class="trend-indicator up">4.2 / 5.0</span>
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">学区房溢价</span>
+                <span class="info-row-value">
+                  <span class="trend-indicator up">+18.5%</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Transportation card -->
+            <div class="info-card">
+              <div class="info-card-title" style="display: flex; align-items: center; gap: var(--space-2);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M7 14h.01"/><path d="M11 14h.01"/><path d="M15 14h.01"/><path d="M7 18h.01"/><path d="M11 18h.01"/><path d="M15 18h.01"/>
+                </svg>
+                交通配套
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">地铁站点</span>
+                <span class="info-row-value">12 个</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">平均通勤</span>
+                <span class="info-row-value">32 分钟</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">公交线路</span>
+                <span class="info-row-value">48 条</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">自驾便利度</span>
+                <span class="info-row-value">
+                  <span class="trend-indicator up">优秀</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Living amenities card -->
+            <div class="info-card">
+              <div class="info-card-title" style="display: flex; align-items: center; gap: var(--space-2);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/>
+                </svg>
+                生活配套
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">商场/超市</span>
+                <span class="info-row-value">36 家</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">医院</span>
+                <span class="info-row-value">8 家</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">公园绿地</span>
+                <span class="info-row-value">15 处</span>
+              </div>
+              <div class="info-row">
+                <span class="info-row-label">综合评分</span>
+                <span class="info-row-value">
+                  <span class="trend-indicator up">4.5 / 5.0</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Volume chart row -->
+        <div class="chart-panel" style="margin-block-start: var(--space-5)">
+          <div class="chart-panel-header">
+            <h3 style="font-size: var(--text-base)">成交量趋势</h3>
+            <div class="chart-tabs">
+              <button class="chart-tab active" onclick="switchVolumeChart('monthly', this)">月度</button>
+              <button class="chart-tab" onclick="switchVolumeChart('weekly', this)">周度</button>
+            </div>
+          </div>
+          <div class="chart-area" style="height: 200px">
+            <canvas id="volumeChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ AREA COMPARISON ═══════════ -->
+    <section class="band-light" id="areas">
+      <div class="container">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-6); margin-block-end: var(--space-8); flex-wrap: wrap;">
+          <div class="stack-2">
+            <p class="eyebrow">区域对比</p>
+            <h2>热门板块一览</h2>
+          </div>
+          <a href="#" class="btn btn-secondary" style="font-size: var(--text-sm);">
+            查看全部区域
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+
+        <div class="area-grid" id="area-grid">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer id="about">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">家察</div>
+          <p class="footer-desc">个人用户的本地房产与区域信息咨询平台。基于数据驱动，帮助你做出更明智的置业决策。</p>
+        </div>
+        <div>
+          <div class="footer-title">产品</div>
+          <ul class="footer-links">
+            <li><a href="#properties">房产搜索</a></li>
+            <li><a href="#analysis">数据分析</a></li>
+            <li><a href="#areas">区域对比</a></li>
+            <li><a href="#">房价评估</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">数据</div>
+          <ul class="footer-links">
+            <li><a href="#">房价走势</a></li>
+            <li><a href="#">学区信息</a></li>
+            <li><a href="#">交通分析</a></li>
+            <li><a href="#">成交记录</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">关于</div>
+          <ul class="footer-links">
+            <li><a href="#">使用帮助</a></li>
+            <li><a href="#">数据来源</a></li>
+            <li><a href="#">隐私政策</a></li>
+            <li><a href="#">联系我们</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 家察 · 数据仅供参考，不构成投资建议</span>
+        <span>数据更新于 2026-05-23</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══════════ PROPERTY DETAIL MODAL ═══════════ -->
+  <div class="modal-overlay" id="property-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title" style="font-size: var(--text-base);">房产详情</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ CHART.JS ═══════════ -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+  <script>
+    // ─── Mock data ─────────────────────────────────────────
+    const PROPERTIES = [
+      {
+        id: 1, name: "翡翠湾花园", district: "朝阳区 · 望京",
+        price: 520, priceUnit: "万", area: 89, rooms: "3室2厅",
+        floor: "中层/28层", year: 2018, tags: ["subway", "school"],
+        school: "望京实验学校 (市重点)", subway: "15号线望京站 300m",
+        trend: "+3.2%", trendDir: "up",
+        desc: "南向三居，精装修，近地铁15号线望京站，对口望京实验学校。小区绿化率35%，物业优质。"
+      },
+      {
+        id: 2, name: "中海御景台", district: "海淀区 · 西北旺",
+        price: 680, priceUnit: "万", area: 120, rooms: "4室2厅",
+        floor: "高层/32层", year: 2022, tags: ["new", "subway"],
+        school: "中关村三小 (区重点)", subway: "16号线西北旺站 500m",
+        trend: "+5.8%", trendDir: "up",
+        desc: "全新精装交付，四叶草户型，南北通透。近永丰产业基地，对口中关村三小分校。"
+      },
+      {
+        id: 3, name: "万科城市之光", district: "通州区 · 梨园",
+        price: 320, priceUnit: "万", area: 75, rooms: "2室1厅",
+        floor: "低层/18层", year: 2016, tags: ["subway"],
+        school: "运河小学 (普通)", subway: "八通线梨园站 200m",
+        trend: "-1.5%", trendDir: "down",
+        desc: "低总价地铁房，八通线梨园站步行3分钟。小区成熟，周边配套齐全，适合刚需。"
+      },
+      {
+        id: 4, name: "龙湖西宸原著", district: "丰台区 · 丽泽",
+        price: 450, priceUnit: "万", area: 98, rooms: "3室2厅",
+        floor: "中层/24层", year: 2020, tags: ["subway", "school"],
+        school: "丰台五小 (区重点)", subway: "14号线丽泽站 400m",
+        trend: "+2.1%", trendDir: "up",
+        desc: "丽泽商务区核心，龙湖品质社区。近14号线丽泽站，对口丰台五小。周边丽泽天街已开业。"
+      },
+      {
+        id: 5, name: "保利和光尘樾", district: "大兴区 · 旧宫",
+        price: 280, priceUnit: "万", area: 85, rooms: "2室2厅",
+        floor: "中层/20层", year: 2023, tags: ["new"],
+        school: "旧宫一小 (普通)", subway: "亦庄线旧宫站 800m",
+        trend: "+1.2%", trendDir: "up",
+        desc: "保利新盘，科技住宅系统。85平两居做到三面采光，南向面宽超10米。近南海子公园。"
+      },
+      {
+        id: 6, name: "泰禾北京院子", district: "昌平区 · 北七家",
+        price: 1200, priceUnit: "万", area: 220, rooms: "5室3厅",
+        floor: "独栋/3层", year: 2019, tags: ["villa"],
+        school: "北师大附中昌平分校 (市重点)", subway: "—",
+        trend: "+4.5%", trendDir: "up",
+        desc: "泰禾院子系别墅，私家庭院200平，中式园林风格。5居3卫全套房设计，双车位车库。"
+      },
+      {
+        id: 7, name: "华润橡树湾", district: "海淀区 · 清河",
+        price: 560, priceUnit: "万", area: 95, rooms: "3室2厅",
+        floor: "高层/26层", year: 2017, tags: ["school", "subway"],
+        school: "清华附小 (市重点)", subway: "13号线清河站 600m",
+        trend: "+2.8%", trendDir: "up",
+        desc: "华润品质社区，对口清华附小。南向三居，全明户型。近清河万象汇，生活便利。"
+      },
+      {
+        id: 8, name: "金地自在城", district: "顺义区 · 后沙峪",
+        price: 350, priceUnit: "万", area: 100, rooms: "3室2厅",
+        floor: "中层/15层", year: 2021, tags: ["new", "subway"],
+        school: "后沙峪中心小学 (区重点)", subway: "15号线后沙峪站 350m",
+        trend: "+0.8%", trendDir: "up",
+        desc: "金地新盘，15号线直达望京。100平三居南北通透，精装交付。近祥云小镇商业区。"
+      },
+      {
+        id: 9, name: "融创壹号院", district: "东城区 · 崇文门",
+        price: 980, priceUnit: "万", area: 130, rooms: "3室2厅",
+        floor: "高层/30层", year: 2020, tags: ["school", "subway"],
+        school: "北京第一实验小学 (市重点)", subway: "2号线崇文门站 100m",
+        trend: "+3.5%", trendDir: "up",
+        desc: "二环内核心地段，融创品质。对口北京第一实验小学，步行至崇文门商圈5分钟。"
+      }
+    ];
+
+    const AREAS = [
+      {
+        name: "朝阳 · 望京",
+        avgPrice: "52,800",
+        trend: "+3.2%",
+        trendDir: "up",
+        schoolScore: 4.2,
+        transScore: 4.8,
+        livingScore: 4.5,
+        safety: 4.3,
+        growth: 4.0,
+        metrics: { listings: 1842, avgDays: 52, subwayStops: 4 }
+      },
+      {
+        name: "海淀 · 西北旺",
+        avgPrice: "65,200",
+        trend: "+5.8%",
+        trendDir: "up",
+        schoolScore: 4.6,
+        transScore: 3.9,
+        livingScore: 4.2,
+        safety: 4.5,
+        growth: 4.7,
+        metrics: { listings: 986, avgDays: 38, subwayStops: 2 }
+      },
+      {
+        name: "通州 · 梨园",
+        avgPrice: "32,500",
+        trend: "-1.5%",
+        trendDir: "down",
+        schoolScore: 3.5,
+        transScore: 4.2,
+        livingScore: 3.8,
+        safety: 3.9,
+        growth: 3.6,
+        metrics: { listings: 2156, avgDays: 78, subwayStops: 3 }
+      },
+      {
+        name: "丰台 · 丽泽",
+        avgPrice: "45,600",
+        trend: "+2.1%",
+        trendDir: "up",
+        schoolScore: 3.8,
+        transScore: 4.5,
+        livingScore: 4.0,
+        safety: 4.1,
+        growth: 4.3,
+        metrics: { listings: 1324, avgDays: 62, subwayStops: 3 }
+      },
+      {
+        name: "东城 · 崇文门",
+        avgPrice: "78,900",
+        trend: "+3.5%",
+        trendDir: "up",
+        schoolScore: 4.7,
+        transScore: 4.9,
+        livingScore: 4.8,
+        safety: 4.6,
+        growth: 3.8,
+        metrics: { listings: 542, avgDays: 45, subwayStops: 5 }
+      },
+      {
+        name: "顺义 · 后沙峪",
+        avgPrice: "35,200",
+        trend: "+0.8%",
+        trendDir: "up",
+        schoolScore: 3.6,
+        transScore: 3.8,
+        livingScore: 4.1,
+        safety: 4.2,
+        growth: 3.9,
+        metrics: { listings: 1678, avgDays: 85, subwayStops: 1 }
+      }
+    ];
+
+    // ─── Render functions ──────────────────────────────────
+    function renderPropertyCard(p) {
+      const tagLabels = { subway: "地铁房", school: "学区房", new: "新盘", villa: "别墅" };
+      const mainTag = p.tags[0];
+      return `
+        <article class="card" onclick="openModal(${p.id})" style="cursor:pointer">
+          <div class="card-img">
+            ${mainTag ? `<span class="property-tag badge badge-accent">${tagLabels[mainTag]}</span>` : ''}
+            <div class="property-img-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card-body">
+            <div>
+              <div class="price">${p.price}<span class="price-unit"> ${p.priceUnit}</span></div>
+              <div style="font-size: var(--text-sm); color: var(--muted); margin-top: 2px;">
+                ${p.name} · ${p.rooms} · ${p.area}m²
+              </div>
+            </div>
+            <div class="property-meta">
+              <span>${p.floor}</span>
+              <span>${p.year}年</span>
+              <span class="trend-indicator ${p.trendDir}">
+                ${p.trendDir === 'up' ? '↑' : '↓'} ${p.trend}
+              </span>
+            </div>
+            <div class="property-location">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              ${p.district}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderAreaCard(a) {
+      const scores = [
+        { label: '学区', value: a.schoolScore, color: '#0071e3' },
+        { label: '交通', value: a.transScore, color: '#0071e3' },
+        { label: '生活', value: a.livingScore, color: '#0071e3' },
+        { label: '治安', value: a.safety, color: '#0071e3' },
+        { label: '增值', value: a.growth, color: '#16a34a' }
+      ];
+      return `
+        <article class="area-card">
+          <div class="area-card-header">
+            <span class="area-card-name">${a.name}</span>
+            <span class="trend-indicator ${a.trendDir}">
+              ${a.trendDir === 'up' ? '↑' : '↓'} ${a.trend}
+            </span>
+          </div>
+          <div class="area-metrics">
+            <div class="area-metric">
+              <span class="area-metric-label">均价</span>
+              <span class="area-metric-value">${a.avgPrice}</span>
+            </div>
+            <div class="area-metric">
+              <span class="area-metric-label">在售</span>
+              <span class="area-metric-value">${a.metrics.listings}</span>
+            </div>
+            <div class="area-metric">
+              <span class="area-metric-label">成交周期</span>
+              <span class="area-metric-value">${a.metrics.avgDays}天</span>
+            </div>
+            <div class="area-metric">
+              <span class="area-metric-label">地铁站</span>
+              <span class="area-metric-value">${a.metrics.subwayStops}个</span>
+            </div>
+          </div>
+          <div class="area-score-list">
+            ${scores.map(s => `
+              <div class="score-bar">
+                <span style="font-size: var(--text-xs); color: var(--muted); width: 28px; flex-shrink: 0;">${s.label}</span>
+                <div class="score-bar-track">
+                  <div class="score-bar-fill" style="width: ${s.value / 5 * 100}%; background: ${s.color};"></div>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-2); width: 24px; text-align: right; font-variant-numeric: tabular-nums;">${s.value}</span>
+              </div>
+            `).join('')}
+          </div>
+        </article>
+      `;
+    }
+
+    // ─── Init ──────────────────────────────────────────────
+    function init() {
+      document.getElementById('property-grid').innerHTML = PROPERTIES.map(renderPropertyCard).join('');
+      document.getElementById('area-grid').innerHTML = AREAS.map(renderAreaCard).join('');
+      initCharts();
+    }
+
+    // ─── Filter ────────────────────────────────────────────
+    let currentFilter = 'all';
+
+    function filterProperties(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const filtered = filter === 'all'
+        ? PROPERTIES
+        : PROPERTIES.filter(p => p.tags.includes(filter));
+      document.getElementById('property-grid').innerHTML = filtered.map(renderPropertyCard).join('');
+    }
+
+    function setFilter(tag) {
+      const map = { '地铁房': 'subway', '学区房': 'school', '低总价': 'all', '大户型': 'villa', '新盘': 'new' };
+      const f = map[tag] || 'all';
+      filterProperties(f, document.querySelector(`.filter-chip[data-filter="${f}"]`));
+      scrollToSection('properties');
+    }
+
+    // ─── Modal ─────────────────────────────────────────────
+    function openModal(id) {
+      const p = PROPERTIES.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('modal-title').textContent = p.name;
+      document.getElementById('modal-body').innerHTML = `
+        <div class="modal-img">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-block-end: var(--space-4);">
+          <span class="price" style="font-size: var(--text-2xl)">${p.price}<span class="price-unit"> ${p.priceUnit}</span></span>
+          <span class="body-sm body-muted">${Math.round(p.price * 10000 / p.area).toLocaleString()} 元/m²</span>
+        </div>
+        <p class="body-sm body-muted" style="margin-block-end: var(--space-5)">${p.desc}</p>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-item-label">户型</span>
+            <span class="detail-item-value">${p.rooms}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-item-label">面积</span>
+            <span class="detail-item-value">${p.area} m²</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-item-label">楼层</span>
+            <span class="detail-item-value">${p.floor}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-item-label">建成年份</span>
+            <span class="detail-item-value">${p.year}年</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-item-label">对口学校</span>
+            <span class="detail-item-value" style="font-size: var(--text-sm)">${p.school}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-item-label">地铁交通</span>
+            <span class="detail-item-value" style="font-size: var(--text-sm)">${p.subway}</span>
+          </div>
+        </div>
+        <div style="margin-block-start: var(--space-6); display: flex; gap: var(--space-3);">
+          <button class="btn-pill" style="flex:1; justify-content: center;">预约看房</button>
+          <button class="btn btn-secondary" style="flex:1; justify-content: center;">收藏</button>
+        </div>
+      `;
+      document.getElementById('property-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('property-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('property-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    // ─── Charts ────────────────────────────────────────────
+    let priceChart, volumeChart;
+
+    function initCharts() {
+      const months = ['5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月'];
+      const priceData = [37200, 37580, 37900, 38100, 37850, 38200, 38400, 38150, 38300, 38500, 38450, 38650];
+      const volumeData = [3850, 3620, 3100, 2950, 3280, 3560, 3150, 2800, 3420, 2980, 3650, 3421];
+
+      const chartStyle = {
+        fontFamily: '-apple-system, "SF Pro Text", "Helvetica Neue", sans-serif',
+        fontSize: 12,
+        color: '#86868b'
+      };
+
+      // Price trend chart
+      const priceCtx = document.getElementById('priceChart').getContext('2d');
+      priceChart = new Chart(priceCtx, {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: '均价 (元/m²)',
+            data: priceData,
+            borderColor: '#0071e3',
+            backgroundColor: 'rgba(0, 113, 227, 0.08)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: '#0071e3'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1d1d1f',
+              titleColor: '#f5f5f7',
+              bodyColor: '#d2d2d7',
+              titleFont: { ...chartStyle, weight: '600' },
+              bodyFont: chartStyle,
+              padding: 12,
+              cornerRadius: 8,
+              displayColors: false,
+              callbacks: {
+                label: ctx => `${ctx.parsed.y.toLocaleString()} 元/m²`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { ...chartStyle },
+              border: { display: false }
+            },
+            y: {
+              grid: { color: '#f5f5f7', drawBorder: false },
+              ticks: {
+                ...chartStyle,
+                callback: v => (v / 10000).toFixed(1) + '万'
+              },
+              border: { display: false },
+              beginAtZero: false
+            }
+          },
+          interaction: { mode: 'index', intersect: false }
+        }
+      });
+
+      // Volume chart
+      const volCtx = document.getElementById('volumeChart').getContext('2d');
+      volumeChart = new Chart(volCtx, {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [{
+            label: '成交量 (套)',
+            data: volumeData,
+            backgroundColor: volumeData.map((v, i) =>
+              i === volumeData.length - 1 ? '#0071e3' : 'rgba(0, 113, 227, 0.2)'
+            ),
+            borderRadius: 4,
+            barPercentage: 0.6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1d1d1f',
+              titleColor: '#f5f5f7',
+              bodyColor: '#d2d2d7',
+              titleFont: { ...chartStyle, weight: '600' },
+              bodyFont: chartStyle,
+              padding: 12,
+              cornerRadius: 8,
+              displayColors: false,
+              callbacks: {
+                label: ctx => `${ctx.parsed.y.toLocaleString()} 套`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { ...chartStyle },
+              border: { display: false }
+            },
+            y: {
+              grid: { color: '#f5f5f7', drawBorder: false },
+              ticks: { ...chartStyle, callback: v => v.toLocaleString() },
+              border: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function switchChart(range, btn) {
+      btn.parentElement.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+
+      let months, data;
+      if (range === '1y') {
+        months = ['5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月'];
+        data = [37200, 37580, 37900, 38100, 37850, 38200, 38400, 38150, 38300, 38500, 38450, 38650];
+      } else if (range === '3y') {
+        months = ['2024 Q1','Q2','Q3','Q4','2025 Q1','Q2','Q3','Q4','2026 Q1','Q2','Q3','Q4'];
+        data = [34200, 35100, 35800, 36200, 36800, 37500, 37900, 38200, 38500, 38650, null, null];
+      } else {
+        months = ['2022','2023 H1','H2','2024 H1','H2','2025 H1','H2','2026'];
+        data = [31500, 32800, 34200, 35600, 37200, 38100, 38500, 38650];
+      }
+
+      priceChart.data.labels = months;
+      priceChart.data.datasets[0].data = data;
+      priceChart.update('active');
+    }
+
+    function switchVolumeChart(range, btn) {
+      btn.parentElement.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+
+      let labels, data;
+      if (range === 'monthly') {
+        labels = ['5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月'];
+        data = [3850, 3620, 3100, 2950, 3280, 3560, 3150, 2800, 3420, 2980, 3650, 3421];
+      } else {
+        labels = ['W1','W2','W3','W4','W5','W6','W7','W8'];
+        data = [820, 910, 780, 850, 920, 870, 760, 890];
+      }
+
+      volumeChart.data.labels = labels;
+      volumeChart.data.datasets[0].data = data;
+      volumeChart.data.datasets[0].backgroundColor = data.map((v, i) =>
+        i === data.length - 1 ? '#0071e3' : 'rgba(0, 113, 227, 0.2)'
+      );
+      volumeChart.update('active');
+    }
+
+    // ─── Navigation ────────────────────────────────────────
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ─── Active nav tracking ──────────────────────────────
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+          const link = document.querySelector(`.nav-links a[href="#${entry.target.id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+
+    // ─── Keyboard ─────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ─── Boot ──────────────────────────────────────────────
+    init();
+  </script>
+</body>
+</html>

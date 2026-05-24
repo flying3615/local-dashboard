@@ -9,7 +9,9 @@ coverage/
 data/*.db
 data/*.db-*
 data/*-cache.json*
+data/*-cache-*.json*
 tmp/
+.wrangler/
 *.sqlite
 *.sqlite3
 

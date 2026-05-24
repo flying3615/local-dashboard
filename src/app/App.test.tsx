@@ -131,4 +131,17 @@ describe("App", () => {
     expect(screen.getByText("Kapiti Coast")).toBeInTheDocument();
     expect(screen.getByText("Wellington City")).toBeInTheDocument();
   });
+
+  it("renders the styled footer", async () => {
+    mockApiResponses();
+
+    const { container } = render(<App />);
+
+    await waitFor(() => {
+      expect(container.querySelector(".app-footer .footer-inner .footer-bottom")).not.toBeNull();
+    });
+    expect(
+      container.querySelector(".app-footer")?.textContent,
+    ).toContain("Kapiti Coast Property Dashboard");
+  });
 });

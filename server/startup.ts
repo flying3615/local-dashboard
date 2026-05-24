@@ -1,11 +1,23 @@
 import type { SourceAdapter } from "./adapters/types";
-import { adaptersForRegion, globalAdapters, mockAdapters } from "./adapters/sourceConfig";
+import { adaptersForRegion, globalAdapters, mockAdapters, type AdapterCacheOptions } from "./adapters/sourceConfig";
+import { createFileCacheStore } from "./adapters/fileCacheStore";
 import { allRegions } from "./config/regions";
 import type { createRepositories } from "./db/repositories";
 import { refreshAll } from "./jobs/refreshAll";
+import type { SitemapCache } from "./adapters/homesNz";
+import type { PropertyCache } from "./adapters/homesNz";
+import type { RealestateCache } from "./adapters/realestate";
 
 type Environment = Record<string, string | undefined>;
 type Repositories = ReturnType<typeof createRepositories>;
+
+function cacheOptionsForRegion(regionId: string): AdapterCacheOptions {
+  return {
+    sitemapCacheStore: createFileCacheStore<SitemapCache>(`data/homes-nz-sitemap-cache-${regionId}.json`),
+    propertyCacheStore: createFileCacheStore<PropertyCache>(`data/homes-nz-property-cache-${regionId}.json`),
+    realestateCacheStore: createFileCacheStore<RealestateCache>(`data/realestate-cache-${regionId}.json`),
+  };
+}
 
 export function shouldSeedMockData(env: Environment): boolean {
   return env.ENABLE_MOCK_DATA === "true";
@@ -13,7 +25,7 @@ export function shouldSeedMockData(env: Environment): boolean {
 
 export function runtimeAdapters(env: Environment): SourceAdapter[] {
   const regionAdapters = allRegions().flatMap((region) =>
-    adaptersForRegion(region.id),
+    adaptersForRegion(region.id, cacheOptionsForRegion(region.id)),
   );
   const all = [...globalAdapters(), ...regionAdapters];
   return shouldSeedMockData(env)

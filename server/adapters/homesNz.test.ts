@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import { gzipSync } from "node:zlib";
 import {
   createHomesNzAdapter,
-  type CacheStore,
   type PropertyCache,
   type SitemapCache,
 } from "./homesNz";
+import type { CacheStore } from "./cacheStore";
 
 // ── Test helpers ────────────────────────────────────────────────
 

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { createRealestateAdapter } from "./realestate";
-import type { RealestateCache, RealestateCacheStore } from "./realestate";
+import type { RealestateCache } from "./realestate";
+import type { CacheStore } from "./cacheStore";
 
 function sitemap(entries: Array<{ id: string; slug: string; lastmod: string }>) {
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -61,7 +62,7 @@ function response(body: unknown, ok = true) {
 
 function memoryCache(initial: RealestateCache | null = null) {
   let saved: RealestateCache | null = initial;
-  const store: RealestateCacheStore = {
+  const store: CacheStore<RealestateCache> = {
     async read() {
       return saved;
     },

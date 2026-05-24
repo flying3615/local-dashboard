@@ -1,7 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { gunzipSync } from "node:zlib";
-
+import { createNoopCacheStore, type CacheStore } from "./cacheStore";
 import type { SourceAdapter } from "./types";
 import type { RawPropertyListing } from "../pipeline/normalize";
 import type { RegionConfig } from "../config/regions";
@@ -40,11 +37,6 @@ export interface PropertyCache {
   revisions: Record<string, string>;
 }
 
-export interface CacheStore<T> {
-  read(): Promise<T | null>;
-  write(cache: T): Promise<void>;
-}
-
 export interface HomesNzAdapterOptions {
   fetchImpl?: FetchImpl;
   sitemapCacheStore?: CacheStore<SitemapCache>;
@@ -67,10 +59,10 @@ export function createHomesNzAdapter(
   const propertyCachePath = region ? `data/homes-nz-property-cache-${region.id}.json` : "data/homes-nz-property-cache.json";
   const sitemapCacheStore =
     options.sitemapCacheStore ??
-    createFileCacheStore<SitemapCache>(sitemapCachePath);
+    createNoopCacheStore<SitemapCache>();
   const propertyCacheStore =
     options.propertyCacheStore ??
-    createFileCacheStore<PropertyCache>(propertyCachePath);
+    createNoopCacheStore<PropertyCache>();
   const maxPropertiesPerFetch = options.maxPropertiesPerFetch ?? 20;
   const throttleMs = options.throttleMs ?? 500;
   const now = options.now ?? (() => new Date().toISOString());
@@ -186,11 +178,19 @@ async function discoverRegionProperties(
 }
 
 async function readSitemapText(response: FetchResponse): Promise<string> {
-  const body = Buffer.from(await response.arrayBuffer());
-  if (body[0] === 0x1f && body[1] === 0x8b) {
-    return gunzipSync(body).toString("utf8");
+  const buffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+    const ds = new DecompressionStream("gzip");
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    }).pipeThrough(ds);
+    return new Response(stream).text();
   }
-  return body.toString("utf8");
+  return new TextDecoder().decode(bytes);
 }
 
 function findChanged(
@@ -341,23 +341,6 @@ function parseRentalShortValue(
 
 function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function createFileCacheStore<T>(path: string): CacheStore<T> {
-  return {
-    async read() {
-      try {
-        const raw = readFileSync(path, "utf-8");
-        return JSON.parse(raw) as T;
-      } catch {
-        return null;
-      }
-    },
-    async write(cache) {
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, JSON.stringify(cache), "utf-8");
-    },
-  };
 }
 
 function sleep(ms: number): Promise<void> {

@@ -154,6 +154,12 @@ export function applySchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS notes_entity_idx
       ON notes(entity_type, entity_id);
+
+    CREATE TABLE IF NOT EXISTS adapter_caches (
+      id TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
     // Safe migration for existing databases (tolerate column-already-exists)
