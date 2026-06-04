@@ -117,6 +117,16 @@ async function routeApi(
   const refreshMatch = url.pathname.match(/^\/api\/sources\/([^/]+)\/refresh$/);
   if (request.method === "POST" && refreshMatch) {
     const sourceId = decodeURIComponent(refreshMatch[1]!);
+
+    if (sourceId.startsWith("homes_co_nz") || sourceId.startsWith("realestate_co_nz")) {
+      return json({
+        sourceId,
+        status: "skipped",
+        recordsProcessed: 0,
+        error: "This source is refreshed via daily scheduled job. Manual refresh is not available on the free plan.",
+      });
+    }
+
     const repos = createD1Repositories(env.DB);
     const regionId = regionFromSourceId(sourceId);
     const adapters = [
@@ -129,17 +139,8 @@ async function routeApi(
       return json({ error: "Source not found" }, 404);
     }
 
-    const resultPromise = refreshAll({ repositories: repos, adapters: [adapter], force: true })
-      .then((results) => results[0]);
-
-    ctx.waitUntil(resultPromise);
-
-    return json({
-      sourceId,
-      status: "success",
-      recordsProcessed: 0,
-      pending: true,
-    });
+    const results = await refreshAll({ repositories: repos, adapters: [adapter], force: true });
+    return json(results[0]);
   }
 
   return json({ error: "Not found" }, 404);
