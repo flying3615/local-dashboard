@@ -324,9 +324,15 @@ function itemTime(item: { publishedAt: string | null; startsAt: string | null })
 }
 
 function regionFromSourceId(sourceId: string): string {
+  const regionIds = new Set(allRegions().map((r) => r.id));
+  // Handle {region}_council pattern (e.g. porirua_council)
+  if (sourceId.endsWith("_council")) {
+    const prefix = sourceId.replace(/_council$/, "");
+    if (regionIds.has(prefix)) return prefix;
+  }
+  // Handle {name}_{region} pattern (e.g. homes_co_nz_kapiti)
   const parts = sourceId.split("_");
   const last = parts[parts.length - 1];
-  const regionIds = new Set(allRegions().map((r) => r.id));
   if (last && regionIds.has(last)) return last;
   return defaultRegion().id;
 }
