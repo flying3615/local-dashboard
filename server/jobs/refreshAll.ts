@@ -90,7 +90,7 @@ export async function refreshAll({
     const existingSource = await repositories.sources.get(adapter.sourceId);
     const source = await upsertAdapterSource(repositories, adapter, existingSource);
 
-    if (!source.enabled) {
+    if (!force && !source.enabled) {
       results.push({
         sourceId: adapter.sourceId,
         status: "skipped",
