@@ -1,10 +1,13 @@
 import { searchKapitiPropertyRecords } from "../server/adapters/kapitiPropertyRecords";
 import { configuredPropertySearchLinks } from "../server/adapters/propertySearchLinks";
 import { allRegions, defaultRegion } from "../server/config/regions";
-import { adaptersForRegion, globalAdapters } from "../server/adapters/sourceConfig";
+import { adaptersForRegion, globalAdapters, type AdapterCacheOptions } from "../server/adapters/sourceConfig";
 import { refreshAll } from "../server/jobs/refreshAll";
 import { createD1Repositories } from "./d1Repository";
-import { scheduledRefresh } from "./refresh";
+import { createD1CacheStore } from "./d1CacheStore";
+import type { SitemapCache, PropertyCache } from "../server/adapters/homesNz";
+import type { RealestateCache } from "../server/adapters/realestate";
+import { scheduledRefresh, cacheOptionsForRegion } from "./refresh";
 import {
   mapItemRow,
   mapPropertyRow,
@@ -114,9 +117,10 @@ async function routeApi(
   if (request.method === "POST" && refreshMatch) {
     const sourceId = decodeURIComponent(refreshMatch[1]!);
     const repos = createD1Repositories(env.DB);
+    const regionId = regionFromSourceId(sourceId);
     const adapters = [
       ...globalAdapters(),
-      ...adaptersForRegion(regionFromSourceId(sourceId)),
+      ...adaptersForRegion(regionId, cacheOptionsForRegion(env.DB, regionId)),
     ];
     const adapter = adapters.find((a) => a.sourceId === sourceId);
 

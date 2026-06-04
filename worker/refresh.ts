@@ -56,7 +56,7 @@ function selectRegion(scheduledTime: number): string {
   return DAY_TO_REGION[day] ?? "kapiti";
 }
 
-function cacheOptionsForRegion(db: D1Database, regionId: string): AdapterCacheOptions {
+export function cacheOptionsForRegion(db: D1Database, regionId: string): AdapterCacheOptions {
   return {
     sitemapCacheStore: createD1CacheStore<SitemapCache>(
       db,
