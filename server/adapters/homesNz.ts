@@ -132,13 +132,18 @@ async function discoverRegionProperties(
   const cached = await sitemapCacheStore.read();
   if (cached) {
     const cacheAge = Date.parse(now) - Date.parse(cached.fetchedAt);
-    if (cacheAge < 7 * 24 * 60 * 60 * 1000) {
+    if (cacheAge < 30 * 24 * 60 * 60 * 1000) {
       return cached.properties;
     }
   }
 
   const allProperties: PropertyUrl[] = [];
   const seen = new Set<string>();
+  const escapedFilter = sitemapFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `<url>\\s*<loc>(https:\\/\\/homes\\.co\\.nz\\/address\\/${escapedFilter}\\/([^<]+)\\/([^<]+)\\/([A-Za-z0-9]+))<\\/loc>`,
+    "g",
+  );
 
   for (let i = 1; i <= SITEMAP_COUNT; i++) {
     const url = `${SITEMAP_BASE}${i}.xml.gz`;
@@ -152,24 +157,20 @@ async function discoverRegionProperties(
       );
     }
 
-    const text = await readSitemapText(response);
-    const escapedFilter = sitemapFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const blockRegex = new RegExp(
-      `<url>\\s*<loc>(https:\\/\\/homes\\.co\\.nz\\/address\\/${escapedFilter}\\/([^<]+)\\/([^<]+)\\/([A-Za-z0-9]+))<\\/loc>`,
-      "g",
-    );
-
-    let match = blockRegex.exec(text);
-    while (match !== null) {
-      const fullUrl = match[1]!;
-      const suburb = match[2]!;
-      const addressSlug = match[3]!;
-      const id = match[4]!;
-      if (!seen.has(id)) {
-        seen.add(id);
-        allProperties.push({ id, url: fullUrl, address: addressSlug, suburb });
+    for await (const chunk of streamSitemapText(response)) {
+      let match = pattern.exec(chunk);
+      while (match !== null) {
+        const fullUrl = match[1]!;
+        const suburb = match[2]!;
+        const addressSlug = match[3]!;
+        const id = match[4]!;
+        if (!seen.has(id)) {
+          seen.add(id);
+          allProperties.push({ id, url: fullUrl, address: addressSlug, suburb });
+        }
+        match = pattern.exec(chunk);
       }
-      match = blockRegex.exec(text);
+      pattern.lastIndex = 0;
     }
   }
 
@@ -177,20 +178,39 @@ async function discoverRegionProperties(
   return allProperties;
 }
 
-async function readSitemapText(response: FetchResponse): Promise<string> {
+async function* streamSitemapText(response: FetchResponse): AsyncGenerator<string> {
   const buffer = await response.arrayBuffer();
   const bytes = new Uint8Array(buffer);
+
+  let readable: ReadableStream<Uint8Array>;
   if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
     const ds = new DecompressionStream("gzip");
-    const stream = new ReadableStream({
+    readable = new ReadableStream({
       start(controller) {
         controller.enqueue(bytes);
         controller.close();
       },
     }).pipeThrough(ds);
-    return new Response(stream).text();
+  } else {
+    readable = new ReadableStream({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
   }
-  return new TextDecoder().decode(bytes);
+
+  const reader = readable.getReader();
+  const decoder = new TextDecoder();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      yield decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 function findChanged(
