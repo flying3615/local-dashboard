@@ -289,11 +289,12 @@ export function createD1Repositories(db: D1Database) {
         return afterWrite(result, parsed);
       },
 
-      async list(filters: { type?: ItemType; region?: string } = {}): Promise<Item[]> {
+      async list(filters: { type?: ItemType; region?: string; sourceId?: string } = {}): Promise<Item[]> {
         const conditions: string[] = [];
         const params: unknown[] = [];
         if (filters.type !== undefined) { conditions.push("type = ?"); params.push(filters.type); }
         if (filters.region !== undefined) { conditions.push("region = ?"); params.push(filters.region); }
+        if (filters.sourceId !== undefined) { conditions.push("source_id = ?"); params.push(filters.sourceId); }
         const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
         return (await readAll<ItemRow>(`SELECT * FROM items ${where} ORDER BY id`, params)).map(mapItem);
       },
@@ -343,7 +344,16 @@ export function createD1Repositories(db: D1Database) {
         return afterWrite(result, parsed);
       },
 
-      async list(): Promise<PropertyListing[]> {
+      async list(filters: { sourceId?: string } = {}): Promise<PropertyListing[]> {
+        if (filters.sourceId) {
+          return (await readAll<PropertyRow>(
+            `SELECT p.* FROM property_listings p
+             INNER JOIN items i ON p.item_id = i.id
+             WHERE i.source_id = ?
+             ORDER BY p.id`,
+            [filters.sourceId],
+          )).map(mapProperty);
+        }
         return (await readAll<PropertyRow>("SELECT * FROM property_listings ORDER BY id")).map(mapProperty);
       },
     },

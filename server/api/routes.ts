@@ -84,7 +84,7 @@ export function createApiRoutes(
       type: "property_listing",
       region,
     });
-    const properties = repositories.properties.list(region);
+    const properties = repositories.properties.list({ region });
     const sources = repositories.sources.list();
 
     const result = propertyItems.map((item) => {

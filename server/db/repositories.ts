@@ -481,11 +481,22 @@ export function createRepositories(db: AppDatabase) {
         return parsed;
       },
 
-      list(region?: string): PropertyListing[] {
-        const rows = region
+      list(filters?: { region?: string; sourceId?: string }): PropertyListing[] {
+        if (filters?.sourceId) {
+          const rows = db
+            .prepare(
+              `SELECT p.* FROM property_listings p
+               INNER JOIN items i ON p.item_id = i.id
+               WHERE i.source_id = ?
+               ORDER BY p.id`,
+            )
+            .all(filters.sourceId) as PropertyListingRow[];
+          return rows.map(mapPropertyListingRow);
+        }
+        const rows = filters?.region
           ? (db
               .prepare("SELECT * FROM property_listings WHERE region = ? ORDER BY id")
-              .all(region) as PropertyListingRow[])
+              .all(filters.region) as PropertyListingRow[])
           : (db
               .prepare("SELECT * FROM property_listings ORDER BY id")
               .all() as PropertyListingRow[]);

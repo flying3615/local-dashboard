@@ -25,12 +25,12 @@ export interface RefreshRepositories {
   };
   items: {
     upsert(item: Item): MaybeAsync<Item>;
-    list(filters?: { type?: ItemType; region?: string }): MaybeAsync<Item[]>;
+    list(filters?: { type?: ItemType; region?: string; sourceId?: string }): MaybeAsync<Item[]>;
     deleteStale(sourceId: string, olderThanIso: string): MaybeAsync<number>;
   };
   properties: {
     upsert(property: PropertyListing): MaybeAsync<PropertyListing>;
-    list(): MaybeAsync<PropertyListing[]>;
+    list(filters?: { sourceId?: string }): MaybeAsync<PropertyListing[]>;
   };
   itemLinks: {
     upsert(link: ItemLink): MaybeAsync<ItemLink>;
@@ -112,8 +112,8 @@ export async function refreshAll({
       const records = await adapter.fetch();
 
       // Pre-read existing data for merge functions (needed for D1 async compatibility)
-      const existingItems = await repositories.items.list();
-      const existingProperties = await repositories.properties.list();
+      const existingItems = await repositories.items.list({ sourceId: adapter.sourceId });
+      const existingProperties = await repositories.properties.list({ sourceId: adapter.sourceId });
       const existingSchools = await repositories.schools.list();
 
       await repositories.transaction(() => {
