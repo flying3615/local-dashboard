@@ -118,6 +118,15 @@ async function routeApi(
   if (request.method === "POST" && refreshMatch) {
     const sourceId = decodeURIComponent(refreshMatch[1]!);
 
+    if (sourceId.startsWith("homes_co_nz") || sourceId.startsWith("realestate_co_nz")) {
+      return json({
+        sourceId,
+        status: "error",
+        recordsProcessed: 0,
+        error: "Manual refresh for this source exceeds the Cloudflare Worker CPU limit. Use the local server refresh or scheduled job instead.",
+      });
+    }
+
     const repos = createD1Repositories(env.DB);
     const regionId = regionFromSourceId(sourceId);
     const adapters = [
