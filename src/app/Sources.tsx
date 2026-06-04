@@ -4,6 +4,7 @@ import type { Source } from "../lib/types";
 
 interface SourcesProps {
   sources: Source[];
+  onRefreshed?: () => void;
 }
 
 interface SourceGroup {
@@ -68,7 +69,7 @@ function firstError(sources: Source[]): string | null {
   return null;
 }
 
-export function Sources({ sources }: SourcesProps) {
+export function Sources({ sources, onRefreshed }: SourcesProps) {
   const groups = useMemo(() => groupSources(sources), [sources]);
 
   return (
@@ -151,11 +152,10 @@ export function Sources({ sources }: SourcesProps) {
                       )}
                     </td>
                     <td>
-                      <div className="source-refresh-group">
-                        {group.regions.map((s) => (
-                          <RefreshButton key={s.id} sourceId={s.id} />
-                        ))}
-                      </div>
+                      <RefreshButton
+                        sourceIds={group.regions.map((s) => s.id)}
+                        onRefreshed={onRefreshed}
+                      />
                     </td>
                   </tr>
                 );

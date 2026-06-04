@@ -284,7 +284,7 @@ export function App() {
 
         {page === "sources" && (
           <div className="container">
-            <Sources sources={sources} />
+            <Sources sources={sources} onRefreshed={() => getSources().then(setSources)} />
           </div>
         )}
       </main>
