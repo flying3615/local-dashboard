@@ -1,6 +1,9 @@
 import { searchKapitiPropertyRecords } from "../server/adapters/kapitiPropertyRecords";
 import { configuredPropertySearchLinks } from "../server/adapters/propertySearchLinks";
 import { allRegions, defaultRegion } from "../server/config/regions";
+import { adaptersForRegion, globalAdapters } from "../server/adapters/sourceConfig";
+import { refreshAll } from "../server/jobs/refreshAll";
+import { createD1Repositories } from "./d1Repository";
 import { scheduledRefresh } from "./refresh";
 import {
   mapItemRow,
@@ -109,12 +112,20 @@ async function routeApi(
 
   const refreshMatch = url.pathname.match(/^\/api\/sources\/([^/]+)\/refresh$/);
   if (request.method === "POST" && refreshMatch) {
-    return json({
-      sourceId: decodeURIComponent(refreshMatch[1]!),
-      status: "skipped",
-      recordsProcessed: 0,
-      error: "Cloudflare refresh is not enabled in this deployment yet.",
-    });
+    const sourceId = decodeURIComponent(refreshMatch[1]!);
+    const repos = createD1Repositories(env.DB);
+    const adapters = [
+      ...globalAdapters(),
+      ...adaptersForRegion(regionFromSourceId(sourceId)),
+    ];
+    const adapter = adapters.find((a) => a.sourceId === sourceId);
+
+    if (!adapter) {
+      return json({ error: "Source not found" }, 404);
+    }
+
+    const results = await refreshAll({ repositories: repos, adapters: [adapter], force: true });
+    return json(results[0]);
   }
 
   return json({ error: "Not found" }, 404);
@@ -295,6 +306,14 @@ function itemTime(item: { publishedAt: string | null; startsAt: string | null })
 
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function regionFromSourceId(sourceId: string): string {
+  const parts = sourceId.split("_");
+  const last = parts[parts.length - 1];
+  const regionIds = new Set(allRegions().map((r) => r.id));
+  if (last && regionIds.has(last)) return last;
+  return defaultRegion().id;
 }
 
 function json(body: unknown, status = 200): Response {
