@@ -75,7 +75,6 @@ export interface RefreshResult {
   status: "success" | "skipped" | "error";
   recordsProcessed: number;
   error?: string;
-  pending?: boolean;
 }
 
 export interface RegionInfo {
