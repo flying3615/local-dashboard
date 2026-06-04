@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Sources } from "./Sources";
 
@@ -19,6 +20,10 @@ function makeSource(overrides = {}) {
 }
 
 describe("Sources", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("shows empty state when no sources", () => {
     render(<Sources sources={[]} />);
 
@@ -61,6 +66,29 @@ describe("Sources", () => {
     render(<Sources sources={[makeSource()]} />);
 
     expect(screen.getByRole("button", { name: /Refresh/ })).toBeInTheDocument();
+  });
+
+  it("shows queued result after enqueueing a refresh", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          sourceId: "homes_co_nz_kapiti",
+          status: "queued",
+          recordsProcessed: 0,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <Sources
+        sources={[makeSource({ id: "homes_co_nz_kapiti", name: "homes.co.nz" })]}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Refresh/ }));
+
+    expect(await screen.findByText("Queued")).toBeInTheDocument();
   });
 
   it("groups sources by name", () => {

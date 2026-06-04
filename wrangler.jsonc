@@ -17,6 +17,21 @@
       "database_id": "e67c12fa-0a37-47f4-bee3-414a20a6e3e6"
     }
   ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "REFRESH_QUEUE",
+        "queue": "paraparaumu-refresh"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "paraparaumu-refresh",
+        "max_batch_size": 1,
+        "max_batch_timeout": 5
+      }
+    ]
+  },
   "triggers": {
     "crons": ["0 1 * * *"]
   }

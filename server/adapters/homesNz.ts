@@ -30,6 +30,8 @@ interface PropertyUrl {
 export interface SitemapCache {
   fetchedAt: string;
   properties: PropertyUrl[];
+  nextSitemapIndex?: number;
+  complete?: boolean;
 }
 
 export interface PropertyCache {
@@ -42,6 +44,7 @@ export interface HomesNzAdapterOptions {
   sitemapCacheStore?: CacheStore<SitemapCache>;
   propertyCacheStore?: CacheStore<PropertyCache>;
   maxPropertiesPerFetch?: number;
+  sitemapPagesPerFetch?: number;
   throttleMs?: number;
   now?: () => string;
   region?: RegionConfig;
@@ -64,6 +67,7 @@ export function createHomesNzAdapter(
     options.propertyCacheStore ??
     createNoopCacheStore<PropertyCache>();
   const maxPropertiesPerFetch = options.maxPropertiesPerFetch ?? 20;
+  const sitemapPagesPerFetch = options.sitemapPagesPerFetch ?? SITEMAP_COUNT;
   const throttleMs = options.throttleMs ?? 500;
   const now = options.now ?? (() => new Date().toISOString());
   const regionId = region?.id ?? "kapiti";
@@ -87,6 +91,7 @@ export function createHomesNzAdapter(
         sitemapFilter,
         sourceId,
         regionId,
+        sitemapPagesPerFetch,
       );
       const cache = await propertyCacheStore.read();
       const changed = findChanged(allProperties, cache, now());
@@ -128,24 +133,37 @@ async function discoverRegionProperties(
   sitemapFilter: string,
   sourceId: string,
   regionId: string,
+  sitemapPagesPerFetch: number,
 ): Promise<PropertyUrl[]> {
   const cached = await sitemapCacheStore.read();
+  const cacheAge = cached ? Date.parse(now) - Date.parse(cached.fetchedAt) : null;
   if (cached) {
-    const cacheAge = Date.parse(now) - Date.parse(cached.fetchedAt);
-    if (cacheAge < 30 * 24 * 60 * 60 * 1000) {
+    const isFresh = cacheAge !== null && cacheAge < 30 * 24 * 60 * 60 * 1000;
+    const isComplete = cached.complete ?? true;
+    if (isFresh && isComplete) {
       return cached.properties;
     }
   }
 
-  const allProperties: PropertyUrl[] = [];
-  const seen = new Set<string>();
+  const canContinue =
+    cached !== null &&
+    cacheAge !== null &&
+    cacheAge < 30 * 24 * 60 * 60 * 1000 &&
+    cached.complete === false;
+  const allProperties: PropertyUrl[] = canContinue ? [...cached.properties] : [];
+  const seen = new Set(allProperties.map((property) => property.id));
+  const startIndex = canContinue ? cached.nextSitemapIndex ?? 1 : 1;
+  const endIndex = Math.min(
+    SITEMAP_COUNT,
+    startIndex + Math.max(1, sitemapPagesPerFetch) - 1,
+  );
   const escapedFilter = sitemapFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(
     `<url>\\s*<loc>(https:\\/\\/homes\\.co\\.nz\\/address\\/${escapedFilter}\\/([^<]+)\\/([^<]+)\\/([A-Za-z0-9]+))<\\/loc>`,
     "g",
   );
 
-  for (let i = 1; i <= SITEMAP_COUNT; i++) {
+  for (let i = startIndex; i <= endIndex; i++) {
     const url = `${SITEMAP_BASE}${i}.xml.gz`;
     const response = await fetchImpl(url, {
       headers: { "User-Agent": "paraparaumu-dashboard/0.1" },
@@ -174,7 +192,13 @@ async function discoverRegionProperties(
     }
   }
 
-  await sitemapCacheStore.write({ fetchedAt: now, properties: allProperties });
+  const complete = endIndex >= SITEMAP_COUNT;
+  await sitemapCacheStore.write({
+    fetchedAt: now,
+    properties: allProperties,
+    nextSitemapIndex: complete ? undefined : endIndex + 1,
+    complete,
+  });
   return allProperties;
 }
 

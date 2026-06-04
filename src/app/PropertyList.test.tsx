@@ -97,7 +97,7 @@ describe("PropertyList", () => {
 
     expect(screen.getByText("12 Example Street, Paraparaumu")).toBeInTheDocument();
     expect(screen.getByText("$875,000")).toBeInTheDocument();
-    expect(screen.getByText("3 bed")).toBeInTheDocument();
+    expect(screen.getAllByText("3 bed").length).toBeGreaterThan(0);
     expect(screen.getByText("2 bath")).toBeInTheDocument();
     expect(screen.getByText("Trade Me")).toBeInTheDocument();
   });

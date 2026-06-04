@@ -1,12 +1,10 @@
 import { searchKapitiPropertyRecords } from "../server/adapters/kapitiPropertyRecords";
 import { configuredPropertySearchLinks } from "../server/adapters/propertySearchLinks";
 import { allRegions, defaultRegion } from "../server/config/regions";
-import { adaptersForRegion, globalAdapters, type AdapterCacheOptions } from "../server/adapters/sourceConfig";
+import { adaptersForRegion, globalAdapters } from "../server/adapters/sourceConfig";
 import { refreshAll } from "../server/jobs/refreshAll";
 import { createD1Repositories } from "./d1Repository";
-import { createD1CacheStore } from "./d1CacheStore";
-import type { SitemapCache, PropertyCache } from "../server/adapters/homesNz";
-import type { RealestateCache } from "../server/adapters/realestate";
+import type { SitemapCache } from "../server/adapters/homesNz";
 import { scheduledRefresh, cacheOptionsForRegion } from "./refresh";
 import {
   mapItemRow,
@@ -29,11 +27,19 @@ import {
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  REFRESH_QUEUE: Queue<RefreshQueueMessage>;
 }
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
 };
+
+interface RefreshQueueMessage {
+  sourceId: string;
+  regionId: string;
+  requestedAt: string;
+  remainingBatches?: number;
+}
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -59,6 +65,14 @@ export default {
     ctx: ExecutionContext,
   ): Promise<void> {
     ctx.waitUntil(scheduledRefresh(event, env));
+  },
+
+  async queue(
+    batch: MessageBatch<RefreshQueueMessage>,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    ctx.waitUntil(processRefreshQueue(batch, env));
   },
 };
 
@@ -117,26 +131,31 @@ async function routeApi(
   const refreshMatch = url.pathname.match(/^\/api\/sources\/([^/]+)\/refresh$/);
   if (request.method === "POST" && refreshMatch) {
     const sourceId = decodeURIComponent(refreshMatch[1]!);
-
-    if (sourceId.startsWith("homes_co_nz") || sourceId.startsWith("realestate_co_nz")) {
-      return json({
-        sourceId,
-        status: "error",
-        recordsProcessed: 0,
-        error: "Manual refresh for this source exceeds the Cloudflare Worker CPU limit. Use the local server refresh or scheduled job instead.",
-      });
-    }
-
     const repos = createD1Repositories(env.DB);
     const regionId = regionFromSourceId(sourceId);
+    const cacheOptions = cacheOptionsForRegion(env.DB, regionId);
     const adapters = [
       ...globalAdapters(),
-      ...adaptersForRegion(regionId, cacheOptionsForRegion(env.DB, regionId)),
+      ...adaptersForRegion(regionId, cacheOptions),
     ];
     const adapter = adapters.find((a) => a.sourceId === sourceId);
 
     if (!adapter) {
       return json({ error: "Source not found" }, 404);
+    }
+
+    if (isQueuedRefreshSource(sourceId)) {
+      await env.REFRESH_QUEUE.send({
+        sourceId,
+        regionId,
+        requestedAt: new Date().toISOString(),
+        remainingBatches: 4,
+      });
+      return json({
+        sourceId,
+        status: "queued",
+        recordsProcessed: 0,
+      });
     }
 
     const results = await refreshAll({ repositories: repos, adapters: [adapter], force: true });
@@ -342,6 +361,88 @@ function currentAdapterSourceIds(): Set<string> {
     ...globalAdapters(),
     ...allRegions().flatMap((region) => adaptersForRegion(region.id)),
   ].map((adapter) => adapter.sourceId));
+}
+
+function isQueuedRefreshSource(sourceId: string): boolean {
+  return sourceId.startsWith("homes_co_nz") || sourceId.startsWith("realestate_co_nz");
+}
+
+async function processRefreshQueue(
+  batch: MessageBatch<RefreshQueueMessage>,
+  env: Env,
+): Promise<void> {
+  const repos = createD1Repositories(env.DB);
+
+  for (const message of batch.messages) {
+    const { sourceId, regionId, remainingBatches = 0 } = message.body;
+    const cacheOptions = queueCacheOptionsForRegion(env.DB, regionId);
+    const adapters = [
+      ...globalAdapters(),
+      ...adaptersForRegion(regionId, cacheOptions),
+    ];
+    const adapter = adapters.find((a) => a.sourceId === sourceId);
+
+    if (!adapter) {
+      console.error(`[queue] Source not found: ${sourceId}`);
+      continue;
+    }
+
+    const results = await refreshAll({
+      repositories: repos,
+      adapters: [adapter],
+      force: true,
+    });
+    const result = results[0];
+    if (result?.status === "error") {
+      console.error(`[queue] ${sourceId}: ${result.error ?? "Refresh failed"}`);
+    } else {
+      console.log(`[queue] ${sourceId}: ${result?.status ?? "unknown"} (${result?.recordsProcessed ?? 0} records)`);
+    }
+
+    if (
+      remainingBatches > 0 &&
+      await shouldContinueQueuedRefresh(sourceId, result?.recordsProcessed ?? 0, cacheOptions.sitemapCacheStore)
+    ) {
+      await env.REFRESH_QUEUE.send({
+        sourceId,
+        regionId,
+        requestedAt: new Date().toISOString(),
+        remainingBatches: remainingBatches - 1,
+      });
+    }
+  }
+}
+
+function queueCacheOptionsForRegion(db: D1Database, regionId: string) {
+  return {
+    ...cacheOptionsForRegion(db, regionId),
+    homesNzOptions: {
+      maxPropertiesPerFetch: 5,
+      sitemapPagesPerFetch: 1,
+      throttleMs: 0,
+    },
+    realestateOptions: {
+      maxListingsPerFetch: 20,
+      throttleMs: 0,
+    },
+  };
+}
+
+async function shouldContinueQueuedRefresh(
+  sourceId: string,
+  recordsProcessed: number,
+  sitemapCacheStore?: { read(): Promise<SitemapCache | null> },
+): Promise<boolean> {
+  if (recordsProcessed > 0) {
+    return true;
+  }
+
+  if (!sourceId.startsWith("homes_co_nz") || !sitemapCacheStore) {
+    return false;
+  }
+
+  const sitemapCache = await sitemapCacheStore.read();
+  return sitemapCache?.complete === false;
 }
 
 function json(body: unknown, status = 200): Response {

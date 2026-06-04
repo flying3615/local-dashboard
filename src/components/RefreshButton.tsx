@@ -27,6 +27,7 @@ export function RefreshButton({ sourceIds, label = "Refresh", onRefreshed }: Ref
 
   const totalRecords = result?.reduce((sum, r) => sum + r.recordsProcessed, 0) ?? 0;
   const hasError = result?.some((r) => r.status === "error") ?? false;
+  const hasQueued = result?.some((r) => r.status === "queued") ?? false;
   const allSkipped = result?.every((r) => r.status === "skipped") ?? false;
 
   return (
@@ -40,9 +41,11 @@ export function RefreshButton({ sourceIds, label = "Refresh", onRefreshed }: Ref
         {loading ? "Refreshing..." : label}
       </button>
       {result && (
-        <span className={`refresh-result refresh-${hasError ? "error" : allSkipped ? "skipped" : "success"}`}>
+        <span className={`refresh-result refresh-${hasError ? "error" : hasQueued ? "queued" : allSkipped ? "skipped" : "success"}`}>
           {hasError
             ? result.find((r) => r.status === "error")?.error ?? "Error"
+            : hasQueued
+              ? "Queued"
             : allSkipped
               ? "Skipped"
               : `${totalRecords} records`}

@@ -42,6 +42,14 @@ export interface AdapterCacheOptions {
   sitemapCacheStore?: CacheStore<SitemapCache>;
   propertyCacheStore?: CacheStore<PropertyCache>;
   realestateCacheStore?: CacheStore<RealestateCache>;
+  homesNzOptions?: Pick<
+    HomesNzAdapterOptions,
+    "maxPropertiesPerFetch" | "sitemapPagesPerFetch" | "throttleMs"
+  >;
+  realestateOptions?: Pick<
+    RealestateAdapterOptions,
+    "maxListingsPerFetch" | "throttleMs"
+  >;
 }
 
 export function adaptersForRegion(
@@ -50,11 +58,17 @@ export function adaptersForRegion(
 ): SourceAdapter[] {
   const region: RegionConfig = (regionId ? getRegion(regionId) : undefined) ?? defaultRegion();
 
-  const homesOpts: HomesNzAdapterOptions = { region };
+  const homesOpts: HomesNzAdapterOptions = {
+    region,
+    ...cacheOptions?.homesNzOptions,
+  };
   if (cacheOptions?.sitemapCacheStore) homesOpts.sitemapCacheStore = cacheOptions.sitemapCacheStore;
   if (cacheOptions?.propertyCacheStore) homesOpts.propertyCacheStore = cacheOptions.propertyCacheStore;
 
-  const realestateOpts: RealestateAdapterOptions = { region };
+  const realestateOpts: RealestateAdapterOptions = {
+    region,
+    ...cacheOptions?.realestateOptions,
+  };
   if (cacheOptions?.realestateCacheStore) realestateOpts.cacheStore = cacheOptions.realestateCacheStore;
 
   return [

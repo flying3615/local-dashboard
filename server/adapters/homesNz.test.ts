@@ -187,6 +187,40 @@ describe("homesNz adapter", () => {
     expect(records[0]?.sourceUrl).toBe(eBB0X_entry.url);
   });
 
+  it("stores resumable sitemap progress when scanning in small batches", async () => {
+    const sitemapCache = memorySitemapCache();
+    const sitemapCalls: string[] = [];
+
+    async function mockFetch(url: string) {
+      if (url.includes("sitemapv2_properties")) {
+        sitemapCalls.push(url);
+        return response(sitemapXml([eBB0X_entry]));
+      }
+      if (url.includes("eBB0X")) {
+        return response(propertyPage(eBB0X_details));
+      }
+      return response("", false);
+    }
+
+    const adapter = createHomesNzAdapter({
+      fetchImpl: mockFetch,
+      sitemapCacheStore: sitemapCache.store,
+      propertyCacheStore: memoryPropertyCache().store,
+      maxPropertiesPerFetch: 1,
+      sitemapPagesPerFetch: 2,
+      throttleMs: 0,
+    });
+
+    const records = await adapter.fetch();
+
+    expect(records).toHaveLength(1);
+    expect(sitemapCalls).toHaveLength(2);
+    expect(sitemapCache.saved()).toMatchObject({
+      nextSitemapIndex: 3,
+      complete: false,
+    });
+  });
+
   it("discovers Paraparaumu properties from sitemaps and extracts data from SSR pages", async () => {
     const sitemapCache = memorySitemapCache();
     const propertyCache = memoryPropertyCache();

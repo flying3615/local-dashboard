@@ -72,7 +72,7 @@ export interface KapitiPropertyRecord {
 
 export interface RefreshResult {
   sourceId: string;
-  status: "success" | "skipped" | "error";
+  status: "success" | "skipped" | "queued" | "error";
   recordsProcessed: number;
   error?: string;
 }
