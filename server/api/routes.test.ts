@@ -226,6 +226,55 @@ describe("API routes", () => {
     expect(Array.isArray(body)).toBe(true);
   });
 
+  it("GET /api/sources omits sources without a configured adapter", async () => {
+    const db = createInMemoryDatabase();
+    const repos = createRepositories(db);
+    const adapter = createMockPropertyAdapter();
+    const app = express();
+    app.use(
+      "/api",
+      createApiRoutes(repos, [adapter], {
+        searchPropertyRecords: async () => [],
+      }),
+    );
+    const { server, url } = await startServer(app);
+
+    try {
+      repos.sources.upsert({
+        id: adapter.sourceId,
+        name: adapter.source.name,
+        type: adapter.source.type,
+        url: adapter.source.url,
+        trustLevel: adapter.source.trustLevel,
+        enabled: true,
+        refreshIntervalMinutes: 720,
+        lastSuccessAt: null,
+        lastError: null,
+      });
+      repos.sources.upsert({
+        id: "homes_co_nz",
+        name: "homes.co.nz",
+        type: "property_platform",
+        url: "https://homes.co.nz/map/wellington/kapiti-coast/paraparaumu",
+        trustLevel: "platform",
+        enabled: true,
+        refreshIntervalMinutes: 1440,
+        lastSuccessAt: "2026-05-23T01:32:02.164Z",
+        lastError: null,
+      });
+
+      const res = await fetch(`${url}/api/sources`);
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.map((source: { id: string }) => source.id)).toEqual([
+        adapter.sourceId,
+      ]);
+    } finally {
+      server.close();
+    }
+  });
+
   it("POST /api/sources/:id/refresh returns results for mock property adapter", async () => {
     const adapter = createMockPropertyAdapter();
     const res = await fetch(`${url}/api/sources/${adapter.sourceId}/refresh`, {

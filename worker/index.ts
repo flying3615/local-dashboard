@@ -111,21 +111,12 @@ async function routeApi(
   }
 
   if (request.method === "GET" && url.pathname === "/api/sources") {
-    return json(await getSources(env.DB));
+    return json(await getSources(env.DB, currentAdapterSourceIds()));
   }
 
   const refreshMatch = url.pathname.match(/^\/api\/sources\/([^/]+)\/refresh$/);
   if (request.method === "POST" && refreshMatch) {
     const sourceId = decodeURIComponent(refreshMatch[1]!);
-
-    if (sourceId.startsWith("homes_co_nz") || sourceId.startsWith("realestate_co_nz")) {
-      return json({
-        sourceId,
-        status: "skipped",
-        recordsProcessed: 0,
-        error: "This source is refreshed via daily scheduled job. Manual refresh is not available on the free plan.",
-      });
-    }
 
     const repos = createD1Repositories(env.DB);
     const regionId = regionFromSourceId(sourceId);
@@ -183,7 +174,7 @@ async function getProperties(db: D1Database, region: string) {
   const [items, properties, sources] = await Promise.all([
     listItems(db, "property_listing", region),
     listProperties(db, region),
-    getSources(db),
+    getSources(db, currentAdapterSourceIds()),
   ]);
 
   return items.map((item) => ({
@@ -267,9 +258,9 @@ async function listProperties(db: D1Database, region?: string) {
   return rows.map(mapPropertyRow);
 }
 
-async function getSources(db: D1Database) {
+async function getSources(db: D1Database, sourceIds: Set<string>) {
   const rows = await all<SourceRow>(db, "SELECT * FROM sources ORDER BY id");
-  return rows.map(mapSourceRow);
+  return rows.map(mapSourceRow).filter((source) => sourceIds.has(source.id));
 }
 
 async function getSource(db: D1Database, id: string) {
@@ -335,6 +326,13 @@ function regionFromSourceId(sourceId: string): string {
   const last = parts[parts.length - 1];
   if (last && regionIds.has(last)) return last;
   return defaultRegion().id;
+}
+
+function currentAdapterSourceIds(): Set<string> {
+  return new Set([
+    ...globalAdapters(),
+    ...allRegions().flatMap((region) => adaptersForRegion(region.id)),
+  ].map((adapter) => adapter.sourceId));
 }
 
 function json(body: unknown, status = 200): Response {

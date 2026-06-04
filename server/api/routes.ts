@@ -28,6 +28,7 @@ export function createApiRoutes(
   options: CreateApiRoutesOptions = {},
 ): Router {
   const router = Router();
+  const adapterSourceIds = new Set(adapters.map((adapter) => adapter.sourceId));
   const searchPropertyRecords =
     options.searchPropertyRecords ?? searchKapitiPropertyRecords;
 
@@ -151,7 +152,9 @@ export function createApiRoutes(
   });
 
   router.get("/sources", (_req: Request, res: Response) => {
-    const sources = repositories.sources.list();
+    const sources = repositories.sources
+      .list()
+      .filter((source) => adapterSourceIds.has(source.id));
     res.json(sources);
   });
 
