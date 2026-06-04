@@ -36,7 +36,7 @@ const jsonHeaders = {
 };
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (!url.pathname.startsWith("/api/")) {
@@ -44,7 +44,7 @@ export default {
     }
 
     try {
-      return await routeApi(request, env, url);
+      return await routeApi(request, env, ctx, url);
     } catch (error) {
       return json(
         { error: error instanceof Error ? error.message : "Internal error" },
@@ -65,6 +65,7 @@ export default {
 async function routeApi(
   request: Request,
   env: Env,
+  ctx: ExecutionContext,
   url: URL,
 ): Promise<Response> {
   if (request.method === "GET" && url.pathname === "/api/regions") {
@@ -128,8 +129,17 @@ async function routeApi(
       return json({ error: "Source not found" }, 404);
     }
 
-    const results = await refreshAll({ repositories: repos, adapters: [adapter], force: true });
-    return json(results[0]);
+    const resultPromise = refreshAll({ repositories: repos, adapters: [adapter], force: true })
+      .then((results) => results[0]);
+
+    ctx.waitUntil(resultPromise);
+
+    return json({
+      sourceId,
+      status: "success",
+      recordsProcessed: 0,
+      pending: true,
+    });
   }
 
   return json({ error: "Not found" }, 404);
